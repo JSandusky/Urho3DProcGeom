@@ -1,4 +1,6 @@
 # Urho3D ProcGeom
+**NOTE:** Image and Drawable only contain one addition each, DrawLine and WriteGeometryToOBJ.
+
 Procedural geometry utilities for Urho3D.
 
 - Lathe
@@ -18,6 +20,7 @@ Procedural geometry utilities for Urho3D.
     - Anchor to ceiling (crown-molding)
     - Anchor to floor (base-boards / floor-trim)
   - Render UV layout to Image
+    - Only change in `Image.h` / `Image.cpp`
   - Compile static shadow-geometry
     - Merged and reduced to canonicals only
   - Write list of `Geometry` to OBJ
