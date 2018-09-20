@@ -1,5 +1,6 @@
 #pragma once
 
+#include <Urho3D/Math/Matrix3x4.h>
 #include <Urho3D/Container/Vector.h>
 
 namespace Urho3D
@@ -42,5 +43,5 @@ namespace Urho3D
     /// Combines the provided geometries into one single geometry with minimal vertex-data and in canonical-form.
     /// For generating occluder and shadow geometry, only for non-transparents.
     /// Up to 20% a boost (less on stronger GPUs). This version always uses 32-bit indices.
-    Geometry* CreateShadowGeom(Context* ctx, const PODVector<Geometry*>& srcGeoms);
+    Geometry* CreateShadowGeom(Context* ctx, const PODVector<Geometry*>& srcGeoms, const PODVector<Matrix3x4>& transforms);
 }

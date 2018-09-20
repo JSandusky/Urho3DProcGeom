@@ -364,13 +364,14 @@ namespace Urho3D
     }
 
     /// Writes out the canonical (seamless) vertex data and the remapped indices. Returns false if there's a failure.
-    bool ExtractCanonicalPositions(Geometry* forGeometry, PODVector<Vector3>& positions, PODVector<unsigned>& indices, unsigned& indexStartOffset)
+    bool ExtractCanonicalPositions(Geometry* forGeometry, PODVector<Vector3>& positions, PODVector<unsigned>& indices, unsigned& indexStartOffset, const Matrix3x4& transform, PODVector<unsigned>* remapping)
     {
         // NOTE: Written to assume it may be used to concatenate multiple geometries.
 
         HashMap<Vector3, unsigned> canonicals;
-        PODVector<unsigned> vertexRemap;
-        vertexRemap.Resize(forGeometry->GetVertexCount());
+        PODVector<unsigned> localVertexRemap;
+        PODVector<unsigned>* vertexRemap = remapping != nullptr ? remapping : &localVertexRemap;
+        vertexRemap->Resize(forGeometry->GetVertexCount());
 
         const unsigned char* vertexData;
         const unsigned char* indexData;
@@ -391,16 +392,17 @@ namespace Urho3D
         for (size_t i = 0; i < forGeometry->GetVertexCount(); ++i)
         {
             Vector3 vertPos = *((Vector3*)(vertexData + vertexSize*i + posOffset));
+            vertPos = transform * vertPos;
             const unsigned tentativeIdx = canonicals.Size();
             auto existing = canonicals.Find(vertPos);
             if (existing == canonicals.End())
             {
                 positions.Push(vertPos);
                 canonicals.Insert(MakePair(vertPos, tentativeIdx));
-                vertexRemap[i] = tentativeIdx;
+                (*vertexRemap)[i] = tentativeIdx;
             }
             else
-                vertexRemap[i] = existing->second_;
+                (*vertexRemap)[i] = existing->second_;
         }
 
         // Make sure there's enough index data space
@@ -433,7 +435,7 @@ namespace Urho3D
         newIndexData.Resize(forGeometry->GetIndexCount());
 
         unsigned idxStartOffset = 0;
-        if (!ExtractCanonicalPositions(forGeometry, newVertexData, newIndexData, idxStartOffset))
+        if (!ExtractCanonicalPositions(forGeometry, newVertexData, newIndexData, idxStartOffset, Matrix3x4::IDENTITY, nullptr))
             return nullptr;
 
         // Create the new geometry
@@ -456,7 +458,7 @@ namespace Urho3D
         return ret;
     }
 
-    Geometry* CreateShadowGeom(Context* ctx, const PODVector<Geometry*>& srcGeoms)
+    Geometry* CreateShadowGeom(Context* ctx, const PODVector<Geometry*>& srcGeoms, const PODVector<Matrix3x4>& transforms)
     {
         unsigned totalVertCt = 0;
         unsigned totalIdxCt = 0;
@@ -476,7 +478,7 @@ namespace Urho3D
         for (unsigned i = 0; i < srcGeoms.Size(); ++i)
         {
             auto forGeometry = srcGeoms[i];
-            if (!ExtractCanonicalPositions(forGeometry, newVertexData, newIndexData, newIndexStartPos))
+            if (!ExtractCanonicalPositions(forGeometry, newVertexData, newIndexData, newIndexStartPos, transforms[i], nullptr))
                 return nullptr; // already logged an error
         }
 
