@@ -8,8 +8,6 @@
 
 #include <ThirdParty/igl/cotmatrix.h>
 #include <ThirdParty/igl/massmatrix.h>
-#include <ThirdParty/igl/mat_min.h>
-#include <ThirdParty/igl/normalize_row_sums.h>
 
 #define BONE_GLOW_ITERATIONS 6
 #define BONE_GLOW_ITERATION_WEIGHT (1.0f / BONE_GLOW_ITERATIONS)
@@ -229,7 +227,7 @@ namespace Urho3D
             }
         }
 
-        PP.coeffRef(vertIndIdx, currentBone.baseIndex_) = weightSum;// *currentBone.segment_.Length();
+        PP.coeffRef(vertIndIdx, currentBone.baseIndex_) = weightSum;
         return MakePair(weightSum, minDist);
     }
 
@@ -280,6 +278,9 @@ namespace Urho3D
         Eigen::MatrixXi F;
         Eigen::SparseMatrix<float> L, M;
 
+        // Extract and construct canonicals
+        // It's necessary to work with canonicals so that weights properly diffuse across seam-edges,
+        // Otherwise weights will not propogate (the cotangent weights will be foul and nullify everything).
         PODVector<Vector3> canonicalPos;
         PODVector<Vector3> canonicalNorm;
         PODVector<unsigned> canonicalIdx;
@@ -305,6 +306,7 @@ namespace Urho3D
             N.coeffRef(i, 2) = norm.z_;
         }
 
+        // build face-matrix
         for (unsigned i = 0; i < canonicalIdx.Size(); i += 3)
         {
             F.coeffRef(i / 3, 0) = canonicalIdx[i];
