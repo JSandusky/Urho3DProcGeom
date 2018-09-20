@@ -139,9 +139,9 @@ namespace Urho3D
                 largeIndices ? ((unsigned*)indexData)[idx + 2] : ((unsigned short*)indexData)[idx + 2],
             };
 
-            indices[indexStartOffset + idx] = indexTable[0] + indexStartOffset;
-            indices[indexStartOffset + idx + 1] = indexTable[1] + indexStartOffset;
-            indices[indexStartOffset + idx + 2] = indexTable[2] + indexStartOffset;
+            indices[indexStartOffset + idx] = (*vertexRemap)[indexTable[0]] + indexStartOffset;
+            indices[indexStartOffset + idx + 1] = (*vertexRemap)[indexTable[1]] + indexStartOffset;
+            indices[indexStartOffset + idx + 2] = (*vertexRemap)[indexTable[2]] + indexStartOffset;
         }
 
         // advance index starting value
