@@ -8,6 +8,7 @@ namespace Urho3D
 {
     class Geometry;
     class Skeleton;
+    class VertexBuffer;
 
     struct URHO3D_API BoneWeight
     {
@@ -23,12 +24,12 @@ namespace Urho3D
         // Get the normalized bone-weights.
         Vector4 Normalized() const;
 
-        // Adds a weight, will replace the worst weight.
+        // Adds a weight, will replace the worst weight, or the first unset weight found.
         void AddWeight(int idx, float w);
     };
 
-    // Uses 
-    URHO3D_API bool CalculateBoneWeights(Geometry* forGeom, Skeleton* againstSkeleton, bool useGlowWeighting = false, bool weightRootBone = false);
+    // Returns a new vertex-buffer (copied from the source) with all of the original data and the calculated weights.
+    URHO3D_API VertexBuffer* CalculateBoneWeights(Geometry* forGeom, Skeleton* againstSkeleton, bool useGlowWeighting = false, bool weightRootBone = false);
 
     struct URHO3D_API LaplaceHandle
     {

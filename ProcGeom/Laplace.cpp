@@ -103,7 +103,7 @@ namespace Urho3D
         HashMap<Vector3, unsigned> canonicals;
         PODVector<unsigned> localVertexRemap;
         PODVector<unsigned>* vertexRemap = remapping != nullptr ? remapping : &localVertexRemap;
-
+        vertexRemap->Resize(vertexCount);
         const bool largeIndices = indexSize == sizeof(unsigned);
 
         // Require a position semantic
@@ -177,7 +177,7 @@ namespace Urho3D
         auto onBone = currentBone.segment_.ClosestPoint(vertexPos);
         for (float i = 0; i < BONE_GLOW_ITERATIONS + 1.0f; ++i)
         {
-            const float fraction = i * (1.0f / BONE_GLOW_ITERATIONS);
+            const float fraction = (i + 1) * (1.0f / BONE_GLOW_ITERATIONS);
 
             const auto currentBonePos = currentBone.segment_.a_.Lerp(currentBone.segment_.b_, fraction);
             const auto toVertex = vertexPos - currentBonePos;
@@ -210,7 +210,7 @@ namespace Urho3D
         auto onBone = currentBone.segment_.ClosestPoint(vertexPos);
         for (float i = 0; i < BONE_GLOW_ITERATIONS + 1.0f; ++i)
         {
-            const float fraction = i * (1.0f / BONE_GLOW_ITERATIONS);
+            const float fraction = (i + 1) * (1.0f / BONE_GLOW_ITERATIONS);
 
             const auto currentBonePos = currentBone.segment_.a_.Lerp(currentBone.segment_.b_, fraction);
             const auto toVertex = vertexPos - currentBonePos;
@@ -235,12 +235,12 @@ namespace Urho3D
 
     typedef Pair<float,float>(*WEIGHTING_FUNCTION)(Eigen::SparseMatrix<float>& PP, Eigen::MatrixXf& pos, Eigen::MatrixXf& norm, int vertIndIdx, int vertexIdx, int boneIdx, kdTree& octree, PODVector<BoneSegment>& bones);
 
-    bool CalculateBoneWeights(Geometry* forGeom, Skeleton* skeleton, bool useGlow, bool weightRoot)
+    VertexBuffer* CalculateBoneWeights(Geometry* forGeom, Skeleton* skeleton, bool useGlow, bool weightRoot)
     {
         if (!forGeom || !skeleton)
         {
             URHO3D_LOGERROR("Cannot calculate bone weights for a mesh whose data does not exist");
-            return false;
+            return nullptr;
         }
 
         const unsigned char* vertexData;
@@ -261,19 +261,13 @@ namespace Urho3D
         if (rawVertexCt == 0 || rawNormalCt == 0 || rawIndexCt == 0 || posOffset == M_MAX_UNSIGNED || normOffset == M_MAX_UNSIGNED)
         {
             URHO3D_LOGERROR("Cannot calculate bone weights for a mesh without vertices: SEM_POSITION & SEM_NORMAL required");
-            return false;
+            return nullptr;
         }
 
         if (boneIdxOffset == -1 || boneWeightOffset == -1)
         {
             URHO3D_LOGERROR("Cannot calculate bone weights for a mesh without weight/index data");
-            return false;
-        }
-
-        if (!skeleton)
-        {
-            URHO3D_LOGERROR("Cannot calculate bone weights for a mesh without a skeleton");
-            return false;
+            return nullptr;
         }
 
         PODVector<BoneSegment> bones = BoneSegment::FromSkeleton(skeleton);
@@ -327,13 +321,13 @@ namespace Urho3D
         Eigen::SparseMatrix<float> P;
         P.resize(canonicalPos.Size(), numJoints);
 
-        kdTreeConstructionData octreeData;
-        octreeData.positionBuffer_ = canonicalPos.Buffer();
-        octreeData.positionBufferLength_ = canonicalPos.Size();
-        octreeData.indexBuffer_ = canonicalIdx.Buffer();
-        octreeData.indexBufferLength_ = canonicalIdx.Size();
-        octreeData.Pack();
-        kdTree octree(octreeData);
+        kdTreeConstructionData kdTreeData;
+        kdTreeData.positionBuffer_ = canonicalPos.Buffer();
+        kdTreeData.positionBufferLength_ = canonicalPos.Size();
+        kdTreeData.indexBuffer_ = canonicalIdx.Buffer();
+        kdTreeData.indexBufferLength_ = canonicalIdx.Size();
+        kdTreeData.Pack();
+        kdTree kdTree(kdTreeData);
 
         WEIGHTING_FUNCTION weightingMethod = useGlow ? CalculateGlowWeight : CalculateHeatWeight;
 
@@ -348,7 +342,7 @@ namespace Urho3D
                 const auto& currentBone = bones[boneIdx];
                 if (currentBone.baseIndex_ == 0 && !weightRoot) // don't weight the root
                     continue;
-                auto weight = weightingMethod(P, V, N, vertIndIdx, vertexIdx, boneIdx, octree, bones);
+                auto weight = weightingMethod(P, V, N, vertIndIdx, vertexIdx, boneIdx, kdTree, bones);
                 if (weight.second_ < minDist)
                 {
                     minDist = weight.second_;
@@ -384,7 +378,7 @@ namespace Urho3D
                 URHO3D_LOGERROR("Bone weight inputs are invaid");
             else
                 URHO3D_LOGERROR("Numerical issue encountered in solving bone weights");
-            return false;
+            return nullptr;
         }
 
         Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic> diffusedWeights = solver.solve(HH/**M*/*P);
@@ -401,6 +395,11 @@ namespace Urho3D
                 }
             }
 
+            VertexBuffer* newVtxBuffer = new VertexBuffer(forGeom->GetContext());
+            newVtxBuffer->SetSize(rawVertexCt, *elements);
+            unsigned char* newData = new unsigned char[vertexSize * rawVertexCt];
+            memcpy(newData, vertexData, vertexSize * rawVertexCt);
+
             // Copy over weights on the original vertex data
             for (unsigned v = 0; v < rawVertexCt; ++v)
             {
@@ -409,20 +408,21 @@ namespace Urho3D
                 auto remapped = canonRemapping[v];
                 auto ind = boneWeights[remapped].boneIdx_;
 
-                // TODO: this has to get written into a new set of vertex data, writing into the shadow data like this is bogus.
-                *(Vector4*)(vertexData + v * vertexSize + boneWeightOffset) = boneWeights[remapped].Normalized();
-                *(unsigned char*)(vertexData + v * vertexSize + boneIdxOffset) = ind[0];
-                *(unsigned char*)(vertexData + v * vertexSize + boneIdxOffset + 1) = ind[1];
-                *(unsigned char*)(vertexData + v * vertexSize + boneIdxOffset + 2) = ind[2];
-                *(unsigned char*)(vertexData + v * vertexSize + boneIdxOffset + 3) = ind[3];
+                *(Vector4*)(newData + v * vertexSize + boneWeightOffset) = boneWeights[remapped].Normalized();
+                *(unsigned char*)(newData + v * vertexSize + boneIdxOffset) = ind[0];
+                *(unsigned char*)(newData + v * vertexSize + boneIdxOffset + 1) = ind[1];
+                *(unsigned char*)(newData + v * vertexSize + boneIdxOffset + 2) = ind[2];
+                *(unsigned char*)(newData + v * vertexSize + boneIdxOffset + 3) = ind[3];
             }
 
-            return true;
+            newVtxBuffer->SetData(newData);
+            delete[] newData;
+            return newVtxBuffer;
         }
         else
         {
             URHO3D_LOGERROR("Failed to find a solution for skin weighting");
-            return false;
+            return nullptr;
         }
     }
 
