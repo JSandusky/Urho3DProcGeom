@@ -14,17 +14,21 @@ namespace Urho3D
         float weights_[4];
         int boneIdx_[4];
 
+        // Construct a clean default state boneweight.
         BoneWeight() { 
             weights_[0] = weights_[1] = weights_[2] = weights_[3] = 0.0f; 
             boneIdx_[0] = boneIdx_[1] = boneIdx_[2] = boneIdx_[3] = -1;
         }
+
+        // Get the normalized bone-weights.
+        Vector4 Normalized() const;
 
         // Adds a weight, will replace the worst weight.
         void AddWeight(int idx, float w);
     };
 
     // Uses 
-    URHO3D_API bool CalculateBoneWeights(Geometry* forGeom, Skeleton* againstSkeleton, PODVector<Vector4>& weights, PODVector<int>& boneIdx);
+    URHO3D_API bool CalculateBoneWeights(Geometry* forGeom, Skeleton* againstSkeleton, bool useGlowWeighting = false, bool weightRootBone = false);
 
     struct URHO3D_API LaplaceHandle
     {
