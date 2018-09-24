@@ -253,7 +253,7 @@ namespace Urho3D
             indices.Push(i);
 
         VertexBuffer* newVtxBuffer = new VertexBuffer(src->GetContext());
-        newVtxBuffer->SetSize(vertexCount * indexCount, elements);
+        newVtxBuffer->SetSize(vertexSize * indexCount, elements);
         newVtxBuffer->SetData(newVertexData);
         resultGeom->SetNumVertexBuffers(1);
         resultGeom->SetVertexBuffer(0, newVtxBuffer);
