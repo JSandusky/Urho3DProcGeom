@@ -428,13 +428,16 @@ namespace Urho3D
             return ret;
         ret->Clear(Color::BLACK);
 
-        GenerateUVImage(ret, geo, ret->GetWidth(), ret->GetHeight());
+        GenerateUVImage(ret, geo);
 
         return ret;
     }
 
-    void GenerateUVImage(Image* image, Geometry* geo, int width, int height)
+    void GenerateUVImage(Image* image, Geometry* geo)
     {
+        const auto width = image->GetWidth();
+        const auto height = image->GetHeight();
+
         const unsigned char* vertexData;
         const unsigned char* indexData;
         unsigned vertexSize;
@@ -512,11 +515,11 @@ namespace Urho3D
             auto v2 = *(Vector3*)(vertices + vertexSize * i2 + positionOffset);
             auto v3 = *(Vector3*)(vertices + vertexSize * i3 + positionOffset);
 
-            auto ab = v2 - v1;
             auto ac = v3 - v1;
+            auto ab = v2 - v1;
             ab.Normalize();
             ac.Normalize();
-            auto norm = ab.CrossProduct(ac).Normalized();
+            auto norm = ac.CrossProduct(ab).Normalized();
             normals[i1] += norm;
             normals[i2] += norm;
             normals[i3] += norm;

@@ -31,10 +31,11 @@ namespace Urho3D
     URHO3D_API Image* GenerateUVImage(Context* ctx, Geometry* geo, int width, int height);
 
     /// Generates a bitmap reference of the UV edges of a geometry.
-    URHO3D_API void GenerateUVImage(Image* image, Geometry* geo, int width, int height);
+    URHO3D_API void GenerateUVImage(Image* image, Geometry* geo);
 
     /// Calculates vertex normals
     URHO3D_API void GenerateNormals(void* vertexData, unsigned vertexSize, 
         const void* indexData, unsigned indexSize, unsigned indexStart, unsigned indexCount,
         unsigned positionOffset, unsigned normalOffset, bool flip = false);
+
 }

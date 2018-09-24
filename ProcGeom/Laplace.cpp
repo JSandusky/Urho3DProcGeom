@@ -4,6 +4,8 @@
 #include <Urho3D/ProcGeom/Laplace.h>
 #include <Urho3D/IO/Log.h>
 #include <Urho3D/Graphics/Skeleton.h>
+#include <Urho3D/ProcGeom/SurfaceGen.h>
+#include <Urho3D/Graphics/Tangent.h>
 #include <Urho3D/Graphics/VertexBuffer.h>
 
 #include <ThirdParty/igl/cotmatrix.h>
@@ -428,30 +430,151 @@ namespace Urho3D
         }
     }
 
-    Geometry* LaplaceDeform(Geometry* forGeom, const PODVector<LaplaceHandle>& handles)
+    VertexBuffer* LaplaceDeform(Geometry* forGeom, const PODVector<LaplaceHandle>& handles)
     {
+        if (forGeom == nullptr)
+        {
+            URHO3D_LOGERROR("Cannot calculate bone weights for a mesh whose data does not exist");
+            return nullptr;
+        }
+        
+        const unsigned char* vertexData;
+        const unsigned char* indexData;
+        unsigned vertexSize, indexSize;
+        const PODVector<VertexElement>* elements;
+        forGeom->GetRawData(vertexData, vertexSize, indexData, indexSize, elements);
 
-#if 0
-        Eigen::MatrixXf positions;
-        Eigen::MatrixXi indices;
+        // vertex element offsets
+        const unsigned posOffset = VertexBuffer::GetElementOffset(*elements, TYPE_VECTOR3, SEM_POSITION);
+        const unsigned normOffset = VertexBuffer::GetElementOffset(*elements, TYPE_VECTOR3, SEM_NORMAL);
+        const unsigned tanOffset = VertexBuffer::GetElementOffset(*elements, TYPE_VECTOR4, SEM_TANGENT);
+        const unsigned texOffset = VertexBuffer::GetElementOffset(*elements, TYPE_VECTOR2, SEM_TEXCOORD, 0);
 
-        FillIGLData(forGeom, positions, indices);
+        const unsigned rawVertexCt = forGeom->GetVertexCount();
+        const unsigned rawIndexCt = forGeom->GetIndexCount();
 
-        Eigen::MatrixXf canonPositions;
-        Eigen::MatrixXi canonIndices;
-        Eigen::MatrixXi canonTable;
-        igl::remove_duplicate_vertices(positions, M_EPSILON, canonPositions, canonIndices, canonTable);
+        if (posOffset == M_MAX_UNSIGNED || rawVertexCt == 0 || rawIndexCt == 0)
+        {
+            URHO3D_LOGERROR("Laplace deformation requires positions in a compete mesh");
+            return nullptr;
+        }
 
-        Eigen::SparseMatrix<float> cotMat, massMat;
-        igl::cotmatrix(canonPositions, canonIndices, cotMat);
-        igl::massmatrix(canonPositions, canonIndices, igl::MASSMATRIX_TYPE_DEFAULT, massMat);
+        PODVector<Vector3> canonicalPos;
+        PODVector<unsigned> canonicalIdx;
+        PODVector<unsigned> canonRemapping;
+        unsigned idxStartOffset = 0;
 
-        Eigen::VectorXf H;
-        H.resize(canonPositions.rows());
-        H.setZero();
-        Eigen::SparseMatrix<float> P;
-#endif
-        return nullptr;
+        extern bool ExtractCanonicalPositions(Geometry*, PODVector<Vector3>&, PODVector<unsigned>&, unsigned&, const Matrix3x4&, PODVector<unsigned>*);
+
+        if (!ExtractCanonicalPositions(forGeom, canonicalPos, canonicalIdx, idxStartOffset, Matrix3x4::IDENTITY, &canonRemapping))
+        {
+            URHO3D_LOGERROR("Could not extract canonicals for laplacian deformation");
+            return nullptr;
+        }
+
+        // Validate handles
+        PODVector<LaplaceHandle> validatedHandles;
+        for (const auto& handle : handles)
+        {
+            LaplaceHandle newHandle;
+            memcpy(&newHandle, &handle, sizeof(LaplaceHandle));
+            newHandle.vertexIndex_ = canonicalPos.IndexOf(newHandle.origin_);
+            if (newHandle.vertexIndex_ != -1)
+                validatedHandles.Push(newHandle);
+        }
+
+        if (validatedHandles.Size() == 0)
+        {
+            URHO3D_LOGERROR("Could not anchor handles for laplacian deformation");
+            return nullptr;
+        }
+
+        // Construct data, then calculate
+        Eigen::MatrixXd V;
+        V.resize(canonicalPos.Size(), 3);
+        for (int i = 0; i < canonicalPos.Size(); ++i)
+        {
+            V.coeffRef(i, 0) = canonicalPos[i].x_;
+            V.coeffRef(i, 1) = canonicalPos[i].y_;
+            V.coeffRef(i, 2) = canonicalPos[i].z_;
+        }
+        Eigen::MatrixXi F;
+        F.resize(canonicalIdx.Size() / 3, 3);
+        for (int i = 0; i < canonicalIdx.Size(); i += 3)
+        {
+            F.coeffRef(i, 0) = canonicalIdx[i];
+            F.coeffRef(i, 1) = canonicalIdx[i + 1];
+            F.coeffRef(i, 2) = canonicalIdx[i + 2];
+        }
+
+        Eigen::SparseMatrix<double> laplaceMatrix;
+        Eigen::SparseMatrix<double> laplaceTransMatrix;
+
+        laplaceMatrix.resize(canonicalPos.Size(), canonicalPos.Size());
+        laplaceMatrix.setIdentity();
+
+        igl::cotmatrix(V, F, laplaceMatrix);
+
+        laplaceMatrix.conservativeResize(canonicalPos.Size() + validatedHandles.Size(), canonicalPos.Size());
+        V.conservativeResize(canonicalPos.Size() + validatedHandles.Size(), 3);
+        for (unsigned i = 0; i < validatedHandles.Size(); ++i)
+        {
+            auto handleVertIdx = validatedHandles[i].vertexIndex_;
+            laplaceMatrix.coeffRef(canonicalPos.Size() + i, handleVertIdx) = 1.0f;
+            
+            const auto pos = validatedHandles[i].replacement_;
+            V.coeffRef(canonicalPos.Size() + i, 0) = pos.x_;
+            V.coeffRef(canonicalPos.Size() + i, 1) = pos.y_;
+            V.coeffRef(canonicalPos.Size() + i, 2) = pos.z_;
+        }
+
+        laplaceTransMatrix = laplaceMatrix.transpose();
+
+        Eigen::SparseMatrix<double> AtA = laplaceTransMatrix * laplaceMatrix;
+        Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic> AtB = laplaceTransMatrix * V;
+        Eigen::SimplicialCholesky<Eigen::SparseMatrix<double>, Eigen::Upper > solver(AtA);
+        if (solver.info() != Eigen::Success)
+        {
+            URHO3D_LOGERROR("Failed to factorize for Laplacian deformation");
+            return nullptr;
+        }
+
+        Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic> deformedPoints = solver.solve(AtB);
+        if (solver.info() != Eigen::Success)
+        {
+            URHO3D_LOGERROR("Failed to solve Laplacian deformation");
+            return nullptr;
+        }
+
+        VertexBuffer* newVtxBuffer = new VertexBuffer(forGeom->GetContext());
+        newVtxBuffer->SetSize(rawVertexCt, *elements);
+        unsigned char* newData = new unsigned char[vertexSize * rawVertexCt];
+        memcpy(newData, vertexData, vertexSize * rawVertexCt);
+
+        // Copy over weights on the original vertex data
+        for (unsigned v = 0; v < rawVertexCt; ++v)
+        {
+            // TODO: port over response-curve based remapping of bone-weights?
+
+            auto remapped = canonRemapping[v];
+            *(Vector3*)(newData + v * vertexSize + posOffset) = Vector3(
+                deformedPoints.coeff(v, 0),
+                deformedPoints.coeff(v, 1),
+                deformedPoints.coeff(v, 2)
+            );
+        }
+
+        // compute normals and tangents as required
+        if (normOffset != M_MAX_UNSIGNED)
+        {
+            GenerateNormals(newData, vertexSize, indexData, indexSize, 0, rawIndexCt, posOffset, normOffset);
+            if (tanOffset != M_MAX_UNSIGNED)
+                GenerateTangents(newData, vertexSize, indexData, indexSize, 0, rawIndexCt, normOffset, texOffset, tanOffset);
+        }
+
+        newVtxBuffer->SetData(newData);
+        delete[] newData;
+        return newVtxBuffer;
     }
 
 }

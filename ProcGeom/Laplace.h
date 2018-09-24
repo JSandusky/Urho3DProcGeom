@@ -35,7 +35,10 @@ namespace Urho3D
     {
         Vector3 origin_;
         Vector3 replacement_;
+        /// Will be calculated during deformation.
+        unsigned vertexIndex_;
     };
 
-    URHO3D_API Geometry* LaplaceDeform(Geometry* forGeom, const PODVector<LaplaceHandle>& handles);
+    // Returns a new vertex-buffer (copied from the source) with all of the original data nd newly calculated positions, normals, and tangents.
+    URHO3D_API VertexBuffer* LaplaceDeform(Geometry* forGeom, const PODVector<LaplaceHandle>& handles);
 }
