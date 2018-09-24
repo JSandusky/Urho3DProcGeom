@@ -23,6 +23,6 @@ namespace Urho3D
 
     URHO3D_API Geometry* MakeVerticesUnique(Geometry* src);
 
-    URHO3D_API Model* MakeModelVerticesUnique(Model* src);
+    URHO3D_API SharedPtr<Model> MakeModelVerticesUnique(Model* src);
 
 }

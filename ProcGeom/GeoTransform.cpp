@@ -180,6 +180,7 @@ namespace Urho3D
         const auto vertexCt = src->GetVertexCount();
         const auto indexStart = src->GetIndexStart();
         const auto indexCt = src->GetIndexCount();
+        const bool largeIndices = indexSize == sizeof(unsigned);
 
         const unsigned posOffset = VertexBuffer::GetElementOffset(*elements, TYPE_VECTOR3, SEM_POSITION);
         if (posOffset == M_MAX_UNSIGNED)
@@ -193,9 +194,9 @@ namespace Urho3D
         for (unsigned i = indexStart; i < indexStart + indexCt; i += 3)
         {
             unsigned indices[] = {
-                indexSize == 2 ? *(unsigned short*)(indexData)[i] : *(unsigned*)(indexData)[i],
-                indexSize == 2 ? *(unsigned short*)(indexData)[i + 1] : *(unsigned*)(indexData)[i + 1],
-                indexSize == 2 ? *(unsigned short*)(indexData)[i + 2] : *(unsigned*)(indexData)[i + 2]
+                largeIndices ? ((unsigned*)indexData)[i] : ((unsigned short*)indexData)[i],
+                largeIndices ? ((unsigned*)indexData)[i + 1] : ((unsigned short*)indexData)[i + 1],
+                largeIndices ? ((unsigned*)indexData)[i + 2] : ((unsigned short*)indexData)[i + 2],
             };
 
             Vector3 a = *(Vector3*)(data + vertexSize * indices[0] + posOffset);
@@ -223,10 +224,10 @@ namespace Urho3D
         auto elements = vtxBuffer->GetElements();
         unsigned vertexSize = vtxBuffer->GetVertexSize();
         unsigned vertexCount = vtxBuffer->GetVertexCount();
-        const bool largeIndices = vertexSize == sizeof(unsigned);
 
         unsigned indexSize = idxBuffer->GetIndexSize();
         unsigned indexCount = idxBuffer->GetIndexCount();
+        const bool largeIndices = indexSize == sizeof(unsigned);
 
         auto vertexData = vtxBuffer->GetShadowData();
         auto indexData = idxBuffer->GetShadowData();
@@ -253,13 +254,15 @@ namespace Urho3D
             indices.Push(i);
 
         VertexBuffer* newVtxBuffer = new VertexBuffer(src->GetContext());
-        newVtxBuffer->SetSize(vertexSize * indexCount, elements);
+        newVtxBuffer->SetShadowed(true);
+        newVtxBuffer->SetSize(indexCount, elements);
         newVtxBuffer->SetData(newVertexData);
         resultGeom->SetNumVertexBuffers(1);
         resultGeom->SetVertexBuffer(0, newVtxBuffer);
         delete[] newVertexData;
 
         IndexBuffer* newIdxBuffer = new IndexBuffer(src->GetContext());
+        newIdxBuffer->SetShadowed(true);
         newIdxBuffer->SetSize(indices.Size(), false);
         newIdxBuffer->SetData(indices.Buffer());
         resultGeom->SetIndexBuffer(newIdxBuffer);
@@ -269,15 +272,14 @@ namespace Urho3D
         return resultGeom;
     }
 
-    Model* MakeModelVerticesUnique(Model* src)
+    SharedPtr<Model> MakeModelVerticesUnique(Model* src)
     {
-        Model* resultModel = src->Clone();
+        auto resultModel = src->Clone();
         for (unsigned i = 0; i < src->GetNumGeometries(); ++i)
         {
             auto geometry = src->GetGeometry(i, 0);
             auto uniqueGeometry = MakeVerticesUnique(geometry);
             resultModel->SetGeometry(i, 0, uniqueGeometry);
-            resultModel->SetGeometryCenter(i, src->GetGeometryCenter(i));
         }
 
         return resultModel;
