@@ -240,9 +240,9 @@ namespace Urho3D
                 largeIndices ? ((unsigned*)indexData)[idx + 2] : ((unsigned short*)indexData)[idx + 2],
             };
 
-            memcpy(newVertexData + vertexSize * idx, vertexData + vertexSize * idx, vertexSize);
-            memcpy(newVertexData + vertexSize * (idx+1), vertexData + vertexSize * (idx+1), vertexSize);
-            memcpy(newVertexData + vertexSize * (idx+2), vertexData + vertexSize * (idx+2), vertexSize);
+            memcpy(newVertexData + vertexSize * idx, vertexData + vertexSize * indices[0], vertexSize);
+            memcpy(newVertexData + vertexSize * (idx+1), vertexData + vertexSize * indices[1], vertexSize);
+            memcpy(newVertexData + vertexSize * (idx+2), vertexData + vertexSize * indices[2], vertexSize);
         }
 
         Geometry* resultGeom = new Geometry(src->GetContext());
