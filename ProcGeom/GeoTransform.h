@@ -25,4 +25,12 @@ namespace Urho3D
 
     URHO3D_API SharedPtr<Model> MakeModelVerticesUnique(Model* src);
 
+    typedef void(*GeoVertexFilter)(const unsigned char* vertexData, const PODVector<VertexElement>* elements);
+    typedef void(*GeoEdgeFilter)(const unsigned char* startVertexData, const unsigned char* endVertexData, const PODVector<VertexElement>* elements);
+    typedef void(*GeoTriangleFilter)(const unsigned char* aVertexData, const unsigned char* bVertexData, const unsigned char* cVertexData, const PODVector<VertexElement>* elements);
+
+    URHO3D_API void ProcessVertices(Geometry* geom, GeoVertexFilter processor);
+    URHO3D_API void ProcessEdges(Geometry* geom, GeoEdgeFilter processor);
+    URHO3D_API void ProcessFaces(Geometry* geom, GeoTriangleFilter processor);
+
 }

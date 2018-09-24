@@ -63,6 +63,7 @@ namespace Urho3D
             GenerateTangents(newData, vertexSize, indexData, indexSize, indexStart, indexCt, normOffset, uvOffset, tangentOffset);
 
         VertexBuffer* newVtxBuffer = new VertexBuffer(src->GetContext());
+        newVtxBuffer->SetShadowed(true);
         newVtxBuffer->SetSize(vertexCt, *elements, false);
         newVtxBuffer->SetData(newData);
         delete[] newData;
@@ -107,6 +108,7 @@ namespace Urho3D
             GenerateTangents(newData, vertexSize, indexData, indexSize, indexStart, indexCt, normOffset, uvOffset, tangentOffset);
 
         VertexBuffer* newVtxBuffer = new VertexBuffer(src->GetContext());
+        newVtxBuffer->SetShadowed(true);
         newVtxBuffer->SetSize(vertexCt, *elements, false);
         newVtxBuffer->SetData(newData);
         delete[] newData;
@@ -283,6 +285,80 @@ namespace Urho3D
         }
 
         return resultModel;
+    }
+
+    void ProcessVertices(Geometry* src, GeoVertexFilter processor)
+    {
+        const unsigned char* data;
+        const unsigned char* indexData;
+        unsigned vertexSize;
+        unsigned indexSize;
+        const PODVector<VertexElement>* elements;
+
+        src->GetRawData(data, vertexSize, indexData, indexSize, elements);
+        const auto vertexStart = src->GetVertexStart();
+        const auto vertexCt = src->GetVertexCount();
+        const auto indexStart = src->GetIndexStart();
+        const auto indexCt = src->GetIndexCount();
+
+        for (unsigned i = 0; i < vertexCt; ++i)
+            processor(data + vertexSize * i, elements);
+    }
+
+    void ProcessEdges(Geometry* src, GeoEdgeFilter processor)
+    {
+        const unsigned char* data;
+        const unsigned char* indexData;
+        unsigned vertexSize;
+        unsigned indexSize;
+        const PODVector<VertexElement>* elements;
+
+        src->GetRawData(data, vertexSize, indexData, indexSize, elements);
+        const auto vertexStart = src->GetVertexStart();
+        const auto vertexCt = src->GetVertexCount();
+        const auto indexStart = src->GetIndexStart();
+        const auto indexCt = src->GetIndexCount();
+        const bool largeIndices = indexSize == sizeof(unsigned);
+
+        for (unsigned i = indexStart; i < indexStart + indexCt; i += 3)
+        {
+            unsigned indices[] = {
+                largeIndices ? ((unsigned*)indexData)[i] : ((unsigned short*)indexData)[i],
+                largeIndices ? ((unsigned*)indexData)[i + 1] : ((unsigned short*)indexData)[i + 1],
+                largeIndices ? ((unsigned*)indexData)[i + 2] : ((unsigned short*)indexData)[i + 2],
+            };
+
+            processor(data + vertexSize * indices[0], data + vertexSize * indices[1], elements);
+            processor(data + vertexSize * indices[1], data + vertexSize * indices[2], elements);
+            processor(data + vertexSize * indices[2], data + vertexSize * indices[0], elements);
+        }
+    }
+
+    void ProcessFaces(Geometry* src, GeoTriangleFilter processor)
+    {
+        const unsigned char* data;
+        const unsigned char* indexData;
+        unsigned vertexSize;
+        unsigned indexSize;
+        const PODVector<VertexElement>* elements;
+
+        src->GetRawData(data, vertexSize, indexData, indexSize, elements);
+        const auto vertexStart = src->GetVertexStart();
+        const auto vertexCt = src->GetVertexCount();
+        const auto indexStart = src->GetIndexStart();
+        const auto indexCt = src->GetIndexCount();
+        const bool largeIndices = indexSize == sizeof(unsigned);
+
+        for (unsigned i = indexStart; i < indexStart + indexCt; i += 3)
+        {
+            unsigned indices[] = {
+                largeIndices ? ((unsigned*)indexData)[i] : ((unsigned short*)indexData)[i],
+                largeIndices ? ((unsigned*)indexData)[i + 1] : ((unsigned short*)indexData)[i + 1],
+                largeIndices ? ((unsigned*)indexData)[i + 2] : ((unsigned short*)indexData)[i + 2],
+            };
+
+            processor(data + vertexSize * indices[0], data + vertexSize * indices[1], data + vertexSize * indices[1], elements);
+        }
     }
 
 }
