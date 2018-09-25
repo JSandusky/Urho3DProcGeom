@@ -361,4 +361,46 @@ namespace Urho3D
         }
     }
 
+    Geometry* ConvertVertexData(Geometry* src, const PODVector<VertexElement>& vertElements, bool recalcTangents, GeoVertexConverter conversion)
+    {
+        const unsigned char* data;
+        const unsigned char* indexData;
+        unsigned vertexSize;
+        unsigned indexSize;
+        const PODVector<VertexElement>* elements;
+
+        src->GetRawData(data, vertexSize, indexData, indexSize, elements);
+        const auto vertexStart = src->GetVertexStart();
+        const auto vertexCt = src->GetVertexCount();
+        const auto indexStart = src->GetIndexStart();
+        const auto indexCt = src->GetIndexCount();
+
+        const auto newVertSize = VertexBuffer::GetVertexSize(vertElements);
+        unsigned char* newData = new unsigned char[vertexCt * newVertSize];
+        for (unsigned i = 0; i < vertexCt; ++i)
+            conversion(newData + i * newVertSize, &vertElements, data + vertexSize * i, elements);
+
+        if (recalcTangents)
+        {
+            auto normOffset = VertexBuffer::GetElementOffset(vertElements, TYPE_VECTOR3, SEM_NORMAL);
+            auto texOffset = VertexBuffer::GetElementOffset(vertElements, TYPE_VECTOR2, SEM_TEXCOORD);
+            auto tanOffset = VertexBuffer::GetElementOffset(vertElements, TYPE_VECTOR4, SEM_TANGENT);
+            if (normOffset != M_MAX_UNSIGNED && texOffset != M_MAX_UNSIGNED && tanOffset != M_MAX_UNSIGNED)
+                GenerateTangents(newData, newVertSize, indexData, indexSize, indexStart, indexCt, normOffset, texOffset, tanOffset);
+        }
+
+        VertexBuffer* newVtxBuffer = new VertexBuffer(src->GetContext());
+        newVtxBuffer->SetShadowed(true);
+        newVtxBuffer->SetSize(vertexCt, vertElements, false);
+        newVtxBuffer->SetData(newData);
+        delete[] newData;
+
+        Geometry* ret = new Geometry(src->GetContext());
+        ret->SetNumVertexBuffers(1);
+        ret->SetVertexBuffer(0, newVtxBuffer);
+        ret->SetIndexBuffer(src->GetIndexBuffer());
+        ret->SetDrawRange(src->GetPrimitiveType(), src->GetIndexStart(), src->GetIndexCount());
+        return ret;
+    }
+
 }
