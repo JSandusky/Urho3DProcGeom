@@ -45,10 +45,6 @@
 #include <vector>
 #include <queue>
 
-#include <SprueEngine/MathGeoLib/AllMath.h>
-
-#include <SprueEngine/UVMapping/UVAtlas.h>
-
 #ifdef _DEBUG
 extern void __cdecl UVAtlasDebugPrintf(unsigned int lvl, _In_z_ _Printf_format_string_ LPCSTR szFormat, ...);
 #define DPF UVAtlasDebugPrintf

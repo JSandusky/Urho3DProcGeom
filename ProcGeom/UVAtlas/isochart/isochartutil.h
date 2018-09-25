@@ -13,7 +13,8 @@
 
 #pragma once
 
-#include <SprueEngine/UVMapping/isochart/isochartconfig.h>
+#include <DirectXMath.h>
+#include "../isochart/isochartconfig.h"
 
 #define FAILURE_RETURN(x) if (FAILED( hr =(x))) return hr
 #define FAILURE_GOTO_END(x) if (FAILED( hr =(x))) goto LEnd

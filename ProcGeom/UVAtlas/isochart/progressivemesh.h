@@ -13,7 +13,7 @@
 
 #pragma once
 
-#include <SprueEngine/UVMapping/isochart/isochartmesh.h>
+#include "isochartmesh.h"
 
 namespace Isochart
 {

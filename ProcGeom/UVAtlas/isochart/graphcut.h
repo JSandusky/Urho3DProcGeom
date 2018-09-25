@@ -13,7 +13,7 @@
 
 #pragma once
 
-#include <SprueEngine/UVMapping/isochart/vis_maxflow.h>
+#include "../isochart/vis_maxflow.h"
 
 namespace Isochart
 {

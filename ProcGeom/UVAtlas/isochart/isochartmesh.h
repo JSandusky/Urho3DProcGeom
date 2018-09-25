@@ -13,16 +13,16 @@
 
 #pragma once
 
-#include <SprueEngine/UVMapping/isochart/basemeshinfo.h>
-#include <SprueEngine/UVMapping/isochart/graphcut.h>
-#include <SprueEngine/UVMapping/isochart/isochart.h>
-#include <SprueEngine/UVMapping/isochart/isomap.h>
-#include <SprueEngine/UVMapping/isochart/isochartengine.h>
-#include <SprueEngine/UVMapping/isochart/isochartutil.h>
-#include <SprueEngine/UVMapping/isochart/sparsematrix.hpp>
+#include "basemeshinfo.h"
+#include "graphcut.h"
+#include "isochart.h"
+#include "isomap.h"
+#include "isochartengine.h"
+#include "isochartutil.h"
+#include "sparsematrix.hpp"
 
-#include <SprueEngine/UVMapping/geodesics/ExactOneToAll.h>
-#include <SprueEngine/UVMapping/geodesics/ApproximateOneToAll.h>
+#include "../geodesics/ExactOneToAll.h"
+#include "../geodesics/ApproximateOneToAll.h"
 
 namespace Isochart
 {

@@ -13,8 +13,8 @@
 
 #pragma once
 
-#include <SprueEngine/UVMapping/pch.h>
-#include <SprueEngine/UVMapping/isochart/isochart.h>
+#include "../pch.h"
+#include "../isochart/isochart.h"
 
 // The original mesh information shared by CIsochartEngine methods
 namespace Isochart

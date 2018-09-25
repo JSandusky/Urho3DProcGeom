@@ -13,7 +13,7 @@
 
 #pragma once
 
-#include <SprueEngine/UVMapping/geodesics/datatypes.h>
+#include "../geodesics/datatypes.h"
 
 namespace GeodesicDist
 {

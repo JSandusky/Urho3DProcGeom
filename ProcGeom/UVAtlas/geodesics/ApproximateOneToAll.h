@@ -13,7 +13,7 @@
 
 #pragma once
 
-#include <SprueEngine/UVMapping/geodesics/ExactOneToAll.h>
+#include "../geodesics/ExactOneToAll.h"
 
 
 namespace GeodesicDist

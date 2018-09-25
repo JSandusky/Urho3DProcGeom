@@ -13,9 +13,9 @@
 
 #pragma once
 
-#include <SprueEngine/UVMapping/isochart/basemeshinfo.h>
-#include <SprueEngine/UVMapping/isochart/callbackschemer.h>
-#include <SprueEngine/UVMapping/maxheap.hpp>
+#include "../isochart/basemeshinfo.h"
+#include "../isochart/callbackschemer.h"
+#include "../maxheap.hpp"
 
 
 namespace Isochart

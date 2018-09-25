@@ -12,7 +12,7 @@
 //-------------------------------------------------------------------------------------
 
 #pragma once
-#include <SprueEngine/UVMapping/maxheap.hpp>
+#include "../maxheap.hpp"
 
 // the "wrapper" class that reverse the ">" and "<" comparison operations
 template <class _Ty1>

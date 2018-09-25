@@ -13,7 +13,8 @@
 
 #pragma once
 
-#include <SprueEngine/UVMapping/geodesics/minheap.hpp>
+#include <DirectXMath.h>
+#include "../geodesics/minheap.hpp"
 
 namespace GeodesicDist
 {

@@ -13,7 +13,7 @@
 
 #pragma once
 
-#include <SprueEngine/UVMapping/geodesics/datatypes.h>
+#include "../geodesics/datatypes.h"
 
 #define SQN(x) (x>=0 ? 1 : -1)
 

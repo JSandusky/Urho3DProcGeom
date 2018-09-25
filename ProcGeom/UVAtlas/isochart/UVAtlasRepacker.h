@@ -13,8 +13,8 @@
 
 #pragma once
 
-#include <SprueEngine/UVMapping/isochart/callbackschemer.h>
-#include <SprueEngine/UVMapping/isochart/isochart.h>
+#include "../isochart/callbackschemer.h"
+#include "../isochart/isochart.h"
 
 namespace IsochartRepacker
 {

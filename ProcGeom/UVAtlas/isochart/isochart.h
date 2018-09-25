@@ -13,8 +13,8 @@
 
 #pragma once
 
-#include <SprueEngine/UVMapping/UVAtlas.h>
-#include <SprueEngine/UVMapping/isochart/isochartconfig.h>
+#include "../UVAtlas.h"
+#include "../isochart/isochartconfig.h"
 
 // Isochart API for one-pass charting
 // "Isochart API" is provided for the users want doing partition and packing in single action. 
