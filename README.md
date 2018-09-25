@@ -1,4 +1,5 @@
 # Urho3D ProcGeom
+
 **NOTE:** Image and Drawable only contain one addition each, DrawLine and WriteGeometryToOBJ.
 
 Procedural geometry utilities for Urho3D.
@@ -14,6 +15,8 @@ Procedural geometry utilities for Urho3D.
 - Carve CSG
   - Helpers for one-off add / subtract / intersect
   - UDIM-like UV coordinate offsets for texture-array packing
+- DirectX UV-Atlas
+  - Automatic chartings
 - Misc Tools
   - Anchoring a list of points to a range
     - Split 50/50 adjust to floor and ceiling
@@ -26,6 +29,20 @@ Procedural geometry utilities for Urho3D.
   - Write list of `Geometry` to OBJ
     - Only change in `Drawable.h` / `Drawable.cpp`
   - `CalculateNormals` like the existing calculate tangents
+  - Geometry transform helpers
+    - Make vertices unique
+    - Convert between different vertex layouts
+    - basic transforms
+    - UV coordinate offsets/transforms
+- UDMF Loading
+  - **Requires MathGeoLib**: for Polygon
+  - Not the actual UDMF format (weird right)
+  - Primary purpose is a source for `guiding` or `reference` data to do other procedural things with
+  - A few transformations
+    - Align edges (move and rotate to line up)
+    - remove sectors
+    - center the map
+    - flip, translate, and rotate
 
 ## Example Output
 
@@ -34,6 +51,22 @@ Procedural geometry utilities for Urho3D.
 Here the UDMF data for Doom2 MAP01 has been refined using spine-lofts along the walls and lathe objects on corners exceeding a threshold to insert columns.
 
 Changing the 2d profiles used for either quickly changes the feel of the refined mesh.
+
+## Generating UV Images
+
+![UVTest.png](UVTest.png)
+
+Wireframes are useful for figuring out how to layout textures for lofts and lathes.
+
+## Loading UDMF (drawing the overhead)
+
+![TestMap.png](TestMap.png)
+
+## UV Generation
+
+![UV generation](UVGen.png)
+
+DX-UV Atlas for automatic UV charting.
 
 ## Dependencies
 
