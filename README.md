@@ -36,7 +36,9 @@ Procedural geometry utilities for Urho3D.
     - UV coordinate offsets/transforms
 - UDMF Loading
   - **Requires MathGeoLib**: for Polygon
+  - **Requires** forked of [GZDoomBuilder](https://github.com/JSandusky/GZDoom-Builder) to do the exporting
   - Not the actual UDMF format (weird right)
+    - Might read actual UDMF someday, some work on a generic lexer in there for it
   - Primary purpose is a source for `guiding` or `reference` data to do other procedural things with
   - A few transformations
     - Align edges (move and rotate to line up)
