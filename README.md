@@ -1,6 +1,6 @@
 # Urho3D ProcGeom
 
-**NOTE:** Image and Drawable only contain one addition each, DrawLine and WriteGeometryToOBJ.
+**NOTE:** Image, IndexBuffer, and Drawable only contain one addition each: DrawLine, SetDataOptimal (*converts 32-bit to 16-bit indices if possible*), and WriteGeometryToOBJ.
 
 Procedural geometry utilities for Urho3D.
 
