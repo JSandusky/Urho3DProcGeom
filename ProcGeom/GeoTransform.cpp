@@ -403,4 +403,85 @@ namespace Urho3D
         return ret;
     }
 
+    extern bool ExtractCanonicalPositions(Geometry* forGeometry, PODVector<Vector3>& positions, PODVector<unsigned>& indices, unsigned& indexStartOffset, const Matrix3x4& transform, PODVector<unsigned>* remapping);
+
+    Geometry* CreateShadowGeom(Context* ctx, Geometry* forGeometry)
+    {
+        PODVector<Vector3> newVertexData;
+        newVertexData.Reserve(forGeometry->GetVertexCount());
+        PODVector<unsigned> newIndexData;
+        newIndexData.Resize(forGeometry->GetIndexCount());
+
+        unsigned idxStartOffset = 0;
+        if (!ExtractCanonicalPositions(forGeometry, newVertexData, newIndexData, idxStartOffset, Matrix3x4::IDENTITY, nullptr))
+            return nullptr;
+
+        // Create the new geometry
+        Geometry* ret = new Geometry(ctx);
+
+        // generate new vertex buffer, position only ... could include UVs if transparent versions are needed
+        auto vertBuffer = new VertexBuffer(ctx);
+        vertBuffer->SetShadowed(true);
+        vertBuffer->SetSize(newVertexData.Size(), ELEMENT_POSITION, false);
+        vertBuffer->SetData(newVertexData.Buffer());
+
+        // generate new index buffer, keep as small as possible
+        auto idxBuffer = new IndexBuffer(ctx);
+        idxBuffer->SetShadowed(true);
+        idxBuffer->SetDataOptimal(newIndexData);
+
+        ret->SetNumVertexBuffers(1);
+        ret->SetVertexBuffer(0, vertBuffer);
+        ret->SetIndexBuffer(idxBuffer);
+        ret->SetDrawRange(TRIANGLE_LIST, 0, idxBuffer->GetIndexCount());
+
+        return ret;
+    }
+
+    Geometry* CreateShadowGeom(Context* ctx, const PODVector<Geometry*>& srcGeoms, const PODVector<Matrix3x4>& transforms)
+    {
+        unsigned totalVertCt = 0;
+        unsigned totalIdxCt = 0;
+        for (unsigned i = 0; i < srcGeoms.Size(); ++i)
+        {
+            totalVertCt += srcGeoms[i]->GetVertexCount();
+            totalIdxCt += srcGeoms[i]->GetIndexCount();
+        }
+
+        PODVector<Vector3> newVertexData;
+        newVertexData.Reserve(totalVertCt);
+
+        PODVector<unsigned> newIndexData;
+        newIndexData.Resize(totalIdxCt);
+
+        unsigned newIndexStartPos = 0;
+        for (unsigned i = 0; i < srcGeoms.Size(); ++i)
+        {
+            auto forGeometry = srcGeoms[i];
+            if (!ExtractCanonicalPositions(forGeometry, newVertexData, newIndexData, newIndexStartPos, transforms[i], nullptr))
+                return nullptr; // already logged an error
+        }
+
+        // Create the new geometry
+        Geometry* ret = new Geometry(ctx);
+
+        // generate new vertex buffer, position only ... could include UVs if transparent versions are needed
+        auto vertBuffer = new VertexBuffer(ctx);
+        vertBuffer->SetShadowed(true);
+        vertBuffer->SetSize(newVertexData.Size(), ELEMENT_POSITION, false);
+        vertBuffer->SetData(newVertexData.Buffer());
+
+        // generate new index buffer, keep as small as possible
+        auto idxBuffer = new IndexBuffer(ctx);
+        idxBuffer->SetShadowed(true);
+        idxBuffer->SetDataOptimal(newIndexData);
+
+        ret->SetNumVertexBuffers(1);
+        ret->SetVertexBuffer(0, vertBuffer);
+        ret->SetIndexBuffer(idxBuffer);
+        ret->SetDrawRange(TRIANGLE_LIST, 0, idxBuffer->GetIndexCount());
+
+        return ret;
+    }
+
 }
