@@ -137,6 +137,7 @@ namespace Urho3D
             ret->SetNumVertexBuffers(1);
             ret->SetVertexBuffer(0, newVertBuffer);
             ret->SetIndexBuffer(newIdxBuffer);
+            ret->SetDrawRange(TRIANGLE_LIST, 0, indexCt);
 
             return ret;
         }
