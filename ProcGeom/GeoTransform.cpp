@@ -53,8 +53,8 @@ namespace Urho3D
             if (uvOffset != M_MAX_UNSIGNED && uvTransform != Matrix3::IDENTITY)
             {
                 Vector2 uvVal = *(Vector2*)(data + vertexSize * i + uvOffset);
-                Vector2 newUVVal(uvVal.x_ * transform.m00_ + uvVal.x_ * transform.m01_ + transform.m02_,
-                    uvVal.y_ * transform.m10_ + uvVal.y_ * transform.m11_ + transform.m12_);
+                Vector2 newUVVal(uvVal.x_ * uvTransform.m00_ + uvVal.x_ * uvTransform.m01_ + uvTransform.m02_,
+                    uvVal.y_ * uvTransform.m10_ + uvVal.y_ * uvTransform.m11_ + uvTransform.m12_);
                 *(Vector2*)(newData + vertexSize * i + uvOffset) = newUVVal;
             }
         }
@@ -114,6 +114,33 @@ namespace Urho3D
         delete[] newData;
 
         return newVtxBuffer;
+    }
+
+    void Transform_Raw(const Matrix3x4& transform, unsigned vertexStart, unsigned vertexCt, const unsigned char* srcData, unsigned char* destData, unsigned srcVertexSize, unsigned destVertexSize, unsigned srcPosOffset, unsigned destPosOffset, unsigned srcNormOffset, unsigned destNormOffset)
+    {
+        auto rotPart = transform.RotationMatrix();
+        for (unsigned i = vertexStart; i < vertexStart + vertexCt; ++i)
+        {
+            Vector3 posVal = *(Vector3*)(srcData + srcVertexSize * i + srcPosOffset);
+            Vector3 normVal = *(Vector3*)(srcData + srcVertexSize * i + srcNormOffset);
+
+            posVal = transform * posVal;
+            normVal = rotPart * normVal;
+
+            *(Vector3*)(destData + destVertexSize * i + destPosOffset) = posVal;
+            *(Vector3*)(destData + destVertexSize * i + destNormOffset) = normVal;
+        }
+    }
+
+    void TransformUV_Raw(const Matrix3& uvTransform, unsigned vertexStart, unsigned vertexCt, const unsigned char* srcData, unsigned char* destData, unsigned srcVertexSize, unsigned destVertexSize, unsigned srcUVOffset, unsigned destUVOffset)
+    {
+        for (unsigned i = vertexStart; i < vertexStart + vertexCt; ++i)
+        {
+            Vector2 uvVal = *(Vector2*)(srcData + srcVertexSize * i + srcUVOffset);
+            Vector2 newUVVal(uvVal.x_ * uvTransform.m00_ + uvVal.x_ * uvTransform.m01_ + uvTransform.m02_,
+                uvVal.y_ * uvTransform.m10_ + uvVal.y_ * uvTransform.m11_ + uvTransform.m12_);
+            *(Vector2*)(destData + destVertexSize * i + destUVOffset) = newUVVal;
+        }
     }
 
     PODVector<Vector3> CalculateTriangleCenters(Geometry* src)
@@ -400,6 +427,21 @@ namespace Urho3D
         ret->SetVertexBuffer(0, newVtxBuffer);
         ret->SetIndexBuffer(src->GetIndexBuffer());
         ret->SetDrawRange(src->GetPrimitiveType(), src->GetIndexStart(), src->GetIndexCount());
+        return ret;
+    }
+
+    SharedPtr<Model> ProcessModelGeometries(Model* model, ModelGeoConverter processor)
+    {
+        SharedPtr<Model> ret = model->Clone();
+        for (unsigned i = 0; i < ret->GetNumGeometries(); ++i)
+        {
+            for (unsigned lodLevel = 0; lodLevel < ret->GetNumGeometryLodLevels(i); ++lodLevel)
+            {
+                auto geometry = ret->GetGeometry(i, 0);
+                if (auto resultGeo = processor(geometry, i, lodLevel, ret.Get()))
+                    ret->SetGeometry(i, lodLevel, resultGeo);
+            }
+        }
         return ret;
     }
 
