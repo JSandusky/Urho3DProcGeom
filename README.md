@@ -79,6 +79,10 @@ DX-UV Atlas for automatic UV charting.
   - Not strict until Laplacian processes are fully ported over
 - Eigen
   - For LibIGL
+  - **WARNING:** some of the LibIGL using parts rely on `Eigen/unsupported/Eigen/...`
+    - DON'T FORGET TO SET THAT UP FOR INCLUDE PATH ACCESS
+- MathGeoLib
+  - For UDMF only
 
 ## Works in progress
 
