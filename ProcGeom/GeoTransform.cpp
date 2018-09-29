@@ -388,6 +388,46 @@ namespace Urho3D
         }
     }
 
+    void GenericVertexConverter(unsigned char* newVertexData, const PODVector<VertexElement>* newVertexElements, const unsigned char* oldVertexData, const PODVector<VertexElement>* oldVertexElements)
+    {
+        for (unsigned i = 0; i < newVertexElements->Size(); ++i)
+        {
+            auto& elem = (*newVertexElements)[i];
+            for (unsigned j = 0; j < oldVertexElements->Size(); ++i)
+            {
+                auto& oldElem = (*oldVertexElements)[i];
+                if (oldElem.type_ == elem.type_ && oldElem.semantic_ == elem.semantic_ && oldElem.index_ == elem.index_)
+                {
+                    switch (elem.type_)
+                    {
+                        switch (elem.type_)
+                        {
+                        case TYPE_VECTOR2:
+                            *(Vector2*)(newVertexData + elem.offset_) = *(Vector2*)(oldVertexData + oldElem.offset_);
+                            break;
+                        case TYPE_VECTOR3:
+                            *(Vector3*)(newVertexData + elem.offset_) = *(Vector3*)(oldVertexData + oldElem.offset_);
+                            break;
+                        case TYPE_VECTOR4:
+                            *(Vector4*)(newVertexData + elem.offset_) = *(Vector4*)(oldVertexData + oldElem.offset_);
+                            break;
+                        case TYPE_UBYTE4:
+                        case TYPE_UBYTE4_NORM:
+                            *(unsigned*)(newVertexData + elem.offset_) = *(unsigned*)(oldVertexData + oldElem.offset_);
+                            break;
+                        case TYPE_FLOAT:
+                            *(float*)(newVertexData + elem.offset_) = *(float*)(oldVertexData + oldElem.offset_);
+                            break;
+                        case TYPE_INT:
+                            *(int*)(newVertexData + elem.offset_) = *(int*)(oldVertexData + oldElem.offset_);
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+    }
+
     Geometry* ConvertVertexData(Geometry* src, const PODVector<VertexElement>& vertElements, bool recalcTangents, GeoVertexConverter conversion)
     {
         const unsigned char* data;

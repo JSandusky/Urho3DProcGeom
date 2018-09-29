@@ -95,6 +95,9 @@ namespace Urho3D
                 *(Vector3*)(newVtxData + i * vertexSize + posOffset) = Vector3(newPos.coeff(i, 0), newPos.coeff(i, 1), newPos.coeff(i, 2));
                 for (auto elem : *elements)
                 {
+                    if (elem.semantic_ == SEM_POSITION)
+                        continue;
+
                     switch (elem.type_)
                     {
                     case TYPE_VECTOR2:
@@ -109,6 +112,9 @@ namespace Urho3D
                     case TYPE_UBYTE4:
                     case TYPE_UBYTE4_NORM:
                         *(unsigned*)(newVtxData + i * vertexSize + elem.offset_) = *(unsigned*)(data + birthIdx * vertexSize + elem.offset_);
+                        break;
+                    case TYPE_FLOAT:
+                        *(float*)(newVtxData + i * vertexSize + elem.offset_) = *(float*)(data + birthIdx * vertexSize + elem.offset_);
                         break;
                     case TYPE_INT:
                         *(int*)(newVtxData + i * vertexSize + elem.offset_) = *(int*)(data + birthIdx * vertexSize + elem.offset_);

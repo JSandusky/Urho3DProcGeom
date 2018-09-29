@@ -45,6 +45,9 @@ namespace Urho3D
     URHO3D_API void ProcessFaces(Geometry* geom, GeoTriangleFilter processor);
 
     typedef void(*GeoVertexConverter)(unsigned char* newVertexData, const PODVector<VertexElement>* newVertexElements, const unsigned char* oldVertexData, const PODVector<VertexElement>* oldVertexElements);
+    
+    /// Loops through the vertex elements and attempts to remap when possible. Not optimal, but handy if you don't care (offline).
+    URHO3D_API void GenericVertexConverter(unsigned char* newVertexData, const PODVector<VertexElement>* newVertexElements, const unsigned char* oldVertexData, const PODVector<VertexElement>* oldVertexElements);
 
     /// General helper for converting beween vertex-data types.
     URHO3D_API Geometry* ConvertVertexData(Geometry* geom, const PODVector<VertexElement>& vertElements, bool recalcTangents, GeoVertexConverter conversion);
