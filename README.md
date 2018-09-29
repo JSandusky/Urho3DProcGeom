@@ -90,6 +90,11 @@ DX-UV Atlas for automatic UV charting.
   - Need to port over from MathGeoLib dependent version
   - Untested, method-changed from original version
   - possibly dropping for IGL harmonics
+- LOD Generation
+  - via `libigl::decimate`
+  - [Seam-Aware Decimater](https://github.com/songrun/SeamAwareDecimater) is being considered, but has issues with real-world use
+    - mapping other vertex data (bone-weights, etc)
+    - May add as an option just for *statics* where normals and tangents can safely be recalculated
 - ~~Bone-glow automatic weights~~
   - Need to port over from MathGeoLib dependent version
   - Untested
