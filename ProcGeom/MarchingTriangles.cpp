@@ -324,6 +324,11 @@ namespace Urho3D
 
             if (numAngles > 0 && nearest.first_ != nullptr && nearest.second_ < Max(frontProximityEdgeLength_, Max(bestVertex.first_->front_->tolerance_, nearest.first_->front_->tolerance_)))
             {
+                // a lot of the contents in here can probably go away now, have to go through a number of things to be sure
+                // Checklist:
+                //  - Genus 0 GOOD
+                //  - Genus 1-9 unknown
+
                 auto current = bestVertex.first_;
                 auto bestPrev = current->prev_;
                 auto bestNext = current->next_;
