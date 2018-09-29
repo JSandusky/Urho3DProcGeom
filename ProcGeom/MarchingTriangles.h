@@ -9,6 +9,7 @@
 
 namespace Urho3D
 {
+    class DebugRenderer;
     class Context;
     class Geometry;
     struct MTFront;
@@ -34,10 +35,10 @@ namespace Urho3D
         MTVertex* next_;
         /// Marker flag for angle recalc. Angle calculation is expensive, don't want to do it on the whole front.
         bool angleDirty_ = true;
-        /// Clones this vertex.
-        MTVertex* Clone();
 
+        /// Construct.
         MTVertex() { }
+        /// Construct, for initializer list.
         MTVertex(unsigned index, const Vector3& position, const Vector3& normal, float angle, MTFront* front, MTVertex* prev, MTVertex* next) :
             index_(index), position_(position), normal_(normal), angle_(angle),
             front_(front), prev_(prev), next_(next_), angleDirty_(true)
@@ -48,12 +49,20 @@ namespace Urho3D
             
         }
 
+        /// Clones this vertex.
+        MTVertex* Clone();
+
+        /// Calculates the `opening angle`, which is a full 360-degree angle betweent the edges at this vertex.
         void CalculateAngle();
 
+        /// Helper for safely setting the next vertex.
         inline void SetNext(MTVertex* next) { next_ = next; next_->prev_ = this; angleDirty_ = true; next_->angleDirty_ = true; }
+        /// Helper for safely setting the previous vertex.
         inline void SetPrev(MTVertex* prev) { prev_ = prev; prev_->next_ = this; angleDirty_ = true; prev_->angleDirty_ = true; }
+        /// Returns true if this vertex is connected to the other one.
         inline bool IsConnectedTo(const MTVertex* other) const { return other == prev_ || other == next_; }
 
+        /// Tests if two vertices are in the same loop.
         bool InSameLoop(const MTVertex* other) const;
 
         /// forms a prev -> center -> next linkage, reduced error risk
@@ -65,9 +74,26 @@ namespace Urho3D
             a->angleDirty_ = b->angleDirty_ = c->angleDirty_ = true;
         }
 
+        /// Returns true if this edge is degenerate.
         bool IsDenegerate() const { return prev_ == next_; }
+        /// Returns true if this vertex is part of a triangle.
         bool IsTriangle() const { return next_->next_ == prev_; }
+        /// Returns true if this vertex is part of a quad.
         bool IsQuad() const { return next_->next_ == prev_->prev_; }
+
+        /// Get the direction vector to the previous vertex.
+        inline Vector3 GetPrevDir() const { return (prev_->position_ - position_).Normalized(); }
+        /// Get the direction vector to the next vertex.
+        inline Vector3 GetNextDir() const { return (next_->position_ - position_).Normalized(); }
+
+        /// Magic value for 
+        static MTVertex* Sentinel() { 
+#ifdef URHO3D_64BIT
+            return (MTVertex*)((unsigned long long)-1);
+#else
+            return (MTVertex*)((unsigned)-1);
+#endif
+        }
     };
 
     /// An advancing front from which triangles will be emitted.
@@ -84,10 +110,19 @@ namespace Urho3D
         Pair<MTVertex*, float> Nearest(const MTVertex* other, const Vector3& candidateExpansionDir) const;
         /// Returns the resulting split front.
         MTFront* SplitFront(MTVertex* vA, MTVertex* vB);
+        /// Merges two fronts into one.
         void MergeFronts(MTFront* a);
+        /// Merges two fronts into one.
+        void FillWithLoop(MTVertex* a);
+
+        /// Verify that the data is okay.
         void SanityCheck();
 
+        /// Destruct and delete contained vertices.
         ~MTFront();
+
+        /// Captures the edges of the front in its' current form. For debug rendering.
+        PODVector<Pair<Vector3, Vector3> > CaptureFrontData() const;
     };
 
     typedef float (*SurfacingFunction)(const Urho3D::Vector3&);
@@ -126,10 +161,21 @@ namespace Urho3D
         void GenerateSurface(SurfacingFunction sdfFunc, MTFront* startFrom, unsigned maxTris = 10000);
         /// Injects a custom mesh into the data and prepares it for
         MTFront* AddCustomGeometry(Geometry* geometry, const Matrix3x4& transform, float reachTolerance = 0.0f);
+        
         /// Converts the data into a triangle mesh.
         Geometry* ExtractGeometry(Context* ctx);
         /// Returns true if any geometry has been written.
         bool HasGeometry() const { return indices_.Size() > 0; }
+
+        /// For Debugging: starts incremental execution
+        virtual void Initialize(SurfacingFunction sdfFunc, const Vector3& seedPoint = Vector3::ZERO, unsigned maxTris = 10000);
+        /// For Debugging: Advances incremental execution, returns true if the surface is complete.
+        virtual bool Advance();
+
+        /// Grabs A->B edges for all of the fronts.
+        PODVector < PODVector<Pair<Vector3, Vector3> > > GetFrontData();
+        /// Helper to draw those A->B front edges to a debug renderer.
+        static void DrawFrontData(DebugRenderer* debugRender, const PODVector < PODVector<Pair<Vector3, Vector3> > >& data);
 
     protected:
         /// Runs the surface generation algorithm. An adaptive implementation may wish to override.
@@ -143,7 +189,7 @@ namespace Urho3D
         /// Calculates the normal via the SDF at the given point.
         Vector3 CalculateNormal(const Vector3& norm) const;
         /// Gets the nearest vertex along the candidate expansion direction. Returned as vert, distance-squared.
-        Pair<MTVertex*, float> Nearest(const MTVertex* other, const Vector3& candidateExpansionDir) const;
+        Pair<MTVertex*, float> Nearest(const MTVertex* other, const Vector3& candidateExpansionDir, const Vector3& normal, int numAngles) const;
 
         /// Index to use for the next vertex, ensures optimal surface reuse of vertices.
         unsigned nextVertexIndex_;
