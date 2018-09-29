@@ -42,4 +42,14 @@ namespace Urho3D
 
     /// General helper for converting beween vertex-data types.
     URHO3D_API Geometry* ConvertVertexData(Geometry* geom, const PODVector<VertexElement>& vertElements, bool recalcTangents, GeoVertexConverter conversion);
+
+    /// Creates a copy of the provided geometry with minimal vertex-data and in canonical form.
+    /// For generating occluder and shadow geometry. Only for non-transparents.
+    /// Up to 20% a boost (less on stronger GPUs).
+    Geometry* CreateShadowGeom(Context* ctx, Geometry* forGeometry);
+
+    /// Combines the provided geometries into one single geometry with minimal vertex-data and in canonical-form.
+    /// For generating occluder and shadow geometry, only for non-transparents.
+    /// Up to 20% a boost (less on stronger GPUs). This version always uses 32-bit indices.
+    Geometry* CreateShadowGeom(Context* ctx, const PODVector<Geometry*>& srcGeoms, const PODVector<Matrix3x4>& transforms);
 }

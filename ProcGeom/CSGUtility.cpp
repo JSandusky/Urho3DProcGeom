@@ -230,7 +230,9 @@ namespace Urho3D
                 offsetof(CSGOutVertex, tangent_));
 
             VertexBuffer* vertBuffer = new VertexBuffer(context);
+            vertBuffer->SetShadowed(true);
             IndexBuffer* idxBuffer = new IndexBuffer(context);
+            idxBuffer->SetShadowed(true);
             vertBuffer->SetSize(vertexData.Size(), {
                 { TYPE_VECTOR3, SEM_POSITION },
                 { TYPE_VECTOR3, SEM_NORMAL },
@@ -443,11 +445,13 @@ namespace Urho3D
 
         // generate new vertex buffer, position only ... could include UVs if transparent versions are needed
         auto vertBuffer = new VertexBuffer(ctx);
+        vertBuffer->SetShadowed(true);
         vertBuffer->SetSize(newVertexData.Size(), ELEMENT_POSITION, false);
         vertBuffer->SetData(newVertexData.Buffer());
 
         // generate new index buffer, keep as small as possible
         auto idxBuffer = new IndexBuffer(ctx);
+        idxBuffer->SetShadowed(true);
         idxBuffer->SetDataOptimal(newIndexData);
 
         ret->SetNumVertexBuffers(1);
@@ -487,11 +491,13 @@ namespace Urho3D
 
         // generate new vertex buffer, position only ... could include UVs if transparent versions are needed
         auto vertBuffer = new VertexBuffer(ctx);
+        vertBuffer->SetShadowed(true);
         vertBuffer->SetSize(newVertexData.Size(), ELEMENT_POSITION, false);
         vertBuffer->SetData(newVertexData.Buffer());
 
         // generate new index buffer, keep as small as possible
         auto idxBuffer = new IndexBuffer(ctx);
+        idxBuffer->SetShadowed(true);
         idxBuffer->SetDataOptimal(newIndexData);
 
         ret->SetNumVertexBuffers(1);

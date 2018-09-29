@@ -30,18 +30,14 @@ namespace Urho3D
         }
     };
 
+    /// Helper for building the call to PerformCSG. Encoding tex-coords will use UDIM-like advancements of U.
     URHO3D_API Geometry* Subtract(Context* ctx, Geometry* src, Geometry* subtract, bool encodeTexCoords = false);
+    /// Helper for building the call to PerformCSG. Encoding tex-coords will use UDIM-like advancements of U.
     URHO3D_API Geometry* Union(Context* ctx, Geometry* src, Geometry* subtract, bool encodeTexCoords = false);
+    /// Helper for building the call to PerformCSG. Encoding tex-coords will use UDIM-like advancements of U.
     URHO3D_API Geometry* Intersect(Context* ctx, Geometry* src, Geometry* subtract, bool encodeTexCoords = false);
+
+    /// Processes the given CSG-operations in sequence, the first item must be additive (it will be forced to be such if it is not).
+    /// Encoding tex-coords advances the U coordinate by 1 for each mesh.
     URHO3D_API Geometry* PerformCSG(Context* ctx, PODVector<CSGOperand>& operands, bool encodeTexCoords = false);
-
-    /// Creates a copy of the provided geometry with minimal vertex-data and in canonical form.
-    /// For generating occluder and shadow geometry. Only for non-transparents.
-    /// Up to 20% a boost (less on stronger GPUs).
-    Geometry* CreateShadowGeom(Context* ctx, Geometry* forGeometry);
-
-    /// Combines the provided geometries into one single geometry with minimal vertex-data and in canonical-form.
-    /// For generating occluder and shadow geometry, only for non-transparents.
-    /// Up to 20% a boost (less on stronger GPUs). This version always uses 32-bit indices.
-    Geometry* CreateShadowGeom(Context* ctx, const PODVector<Geometry*>& srcGeoms, const PODVector<Matrix3x4>& transforms);
 }
