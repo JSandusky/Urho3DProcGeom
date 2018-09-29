@@ -84,9 +84,13 @@ DX-UV Atlas for automatic UV charting.
 
 - Laplacian deformation
   - Need to port over from MathGeoLib dependent version
-- Bone-glow automatic weights
+  - Untested, method-changed from original version
+  - possibly dropping for IGL harmonics
+- ~~Bone-glow automatic weights~~
   - Need to port over from MathGeoLib dependent version
-- Auto UVs
+  - Untested
+- ~~Auto UVs~~
+  - Tested and works
 - CGA-like volume grammar
   - sorting out license issues
 

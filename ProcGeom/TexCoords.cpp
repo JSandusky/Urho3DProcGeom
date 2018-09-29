@@ -109,7 +109,7 @@ namespace Urho3D
                 auto normOffset = VertexBuffer::GetElementOffset(*elements, TYPE_VECTOR3, SEM_NORMAL);
                 auto texOffset = VertexBuffer::GetElementOffset(*elements, TYPE_VECTOR2, SEM_TEXCOORD, 0);
                 auto tanOffset = VertexBuffer::GetElementOffset(*elements, TYPE_VECTOR4, SEM_TANGENT);
-                if (normOffset != M_MAX_UNSIGNED && texOffset != M_MAX_UNSIGNED && tanOffset != M_MAX_UNSIGNED)
+                if (uvSet == 0 && normOffset != M_MAX_UNSIGNED && texOffset != M_MAX_UNSIGNED && tanOffset != M_MAX_UNSIGNED)
                     GenerateTangents(newData, vertexSize, indexData, indexSize, indexStart, indexCt, normOffset, texOffset, tanOffset);
 
                 Geometry* result = new Geometry(src->GetContext());
