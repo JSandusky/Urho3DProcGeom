@@ -5,9 +5,15 @@
 
 namespace Urho3D
 {
-
     class Geometry;
     class Model;
+
+    /*
+    These functions use LibIGL to do the decimate, I had considered using 
+    https://github.com/songrun/SeamAwareDecimater which is a seam-minimizing decimater.
+    However, that library doesn't presently provide the necessary means to get access to the birthing
+    vertices for remapping other vertex attributes like bone-weights and normals.
+    */
 
     /// Emits a reduced version of the given geometry.
     URHO3D_API Geometry* GenerateLOD(Geometry* forGeom, float lodPower);
