@@ -176,36 +176,65 @@ namespace Urho3D
         {
             for (int i = 0; i < points.Size(); ++i)
             {
-                int next = i + 1;
                 int prev = i - 1;
-                Vector3 thisPt = points[i];
-                Vector3 diff;
-                if (next >= points.Size())
+                int next = i + 1;
+                Vector3 pt = points[i];
+                Vector3 cur;
+                Vector3 backup;
+                if (prev >= 0)
                 {
-                    Vector3 prevPt = points[prev];
-                    diff = thisPt - prevPt;
-                    diff.Normalize();
+                    auto prevPt = points[prev];
+                    prevPt = Quaternion(-90, Vector3::UP) * (pt - prevPt);
+                    prevPt.Normalize();
+                    backup = prevPt;
+                    cur += prevPt;
                 }
-                else
+                else if (i == 0 && points.Front() == points.Back())
                 {
-                    Vector3 nextPt = points[next];
-                    diff = nextPt - thisPt;
-                    diff.Normalize();
-
-                    if (prev >= 0)
-                    {
-                        Vector3 prevPt = points[prev];
-                        diff += (thisPt - prevPt).Normalized();
-                        // derp, DO NOT NORMALIZE, that's how you get severe pinching
-                        diff *= 0.5f; // like this pinching is softer ... still there
-                    }
-                    
+                    auto prevPt = points[points.Size() - 2];
+                    prevPt = Quaternion(-90, Vector3::UP) * (pt - prevPt);
+                    prevPt.Normalize();
+                    backup = prevPt;
+                    cur += prevPt;
                 }
-
-                diff = Quaternion(-90, Vector3::UP) * diff;
-                //diff = diff.CrossProduct(Vector3::UP);
-                loftNormals.Push(diff);
+                if (next < points.Size())
+                {
+                    auto nextPt = points[next];
+                    nextPt = Quaternion(-90, Vector3::UP) * (nextPt - pt);
+                    nextPt.Normalize();
+                    backup = nextPt;
+                    cur += nextPt;
+                }
+                else if (i == points.Size() - 1 && points.Front() == points.Back())
+                {
+                    auto nextPt = points[1];
+                    nextPt = Quaternion(-90, Vector3::UP) * (nextPt - pt);
+                    nextPt.Normalize();
+                    backup = nextPt;
+                    cur += nextPt;
+                }
+                cur.Normalize();
+                if (isnan(cur.x_) || isnan(cur.y_))
+                    cur = backup;
+                loftNormals.Push(cur);
             }
+
+            PODVector<Vector3> corrected;
+            for (unsigned i = 0; i < loftNormals.Size(); ++i)
+            {
+                if (i == 0 || i == loftNormals.Size() - 1)
+                {
+                    corrected.Push(loftNormals[i]);
+                    continue;
+                }
+                auto cur = loftNormals[i];
+                auto prevNorm = loftNormals[i - 1];
+                auto nextNorm = loftNormals[i + 1];
+
+                auto newCur = cur * (1.0f + (1.0f - cur.AbsDotProduct(prevNorm)) + (1.0f - cur.AbsDotProduct(nextNorm)));
+                corrected.Push(newCur);
+            }
+            loftNormals = corrected;
         }
 
         if (squashTails)
