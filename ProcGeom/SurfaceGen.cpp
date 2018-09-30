@@ -2,6 +2,7 @@
 
 #include <Urho3D/Math/Color.h>
 #include <Urho3D/Core/Context.h>
+#include <Urho3D/Math/Vector3.h>
 #include <Urho3D/Math/Vector4.h>
 #include <Urho3D/Graphics/Geometry.h>
 #include <Urho3D/Resource/Image.h>
@@ -183,15 +184,27 @@ namespace Urho3D
                 {
                     Vector3 prevPt = points[prev];
                     diff = thisPt - prevPt;
+                    diff.Normalize();
                 }
                 else
                 {
                     Vector3 nextPt = points[next];
                     diff = nextPt - thisPt;
+                    diff.Normalize();
+
+                    if (prev >= 0)
+                    {
+                        Vector3 prevPt = points[prev];
+                        diff += (thisPt - prevPt).Normalized();
+                        // derp, DO NOT NORMALIZE, that's how you get severe pinching
+                        diff *= 0.5f; // like this pinching is softer ... still there
+                    }
+                    
                 }
-                diff.Normalize();
-                diff.CrossProduct(Vector3::UP);
-                loftNormals.Push(diff.Normalized());
+
+                diff = Quaternion(-90, Vector3::UP) * diff;
+                //diff = diff.CrossProduct(Vector3::UP);
+                loftNormals.Push(diff);
             }
         }
 
@@ -224,6 +237,8 @@ namespace Urho3D
                 Vector3 pt = cornerPt;
                 pt.y_ += profPt.y_;
                 if ((u == 0 || u == edges) && !squashTails)
+                    pt += cornerNorm * profPt.x_;
+                else if (!squashTails)
                     pt += cornerNorm * profPt.x_;
 
                 if (u == 0)
@@ -327,15 +342,17 @@ namespace Urho3D
         {
             float uCoord = (u / (float)(edges));
             Vector3 cornerPt = loftPoints[u].Translation();
-            Vector3 cornerUp = loftPoints[u].Column(1);
-            Vector3 cornerRight = loftPoints[u].Column(0);
+            Vector4 cornerUpV = loftPoints[u].Row(1);
+            Vector4 cornerRightV = loftPoints[u].Row(0);
+            Vector3 cornerUp(cornerUpV.x_, cornerUpV.y_,cornerUpV.z_);
+            Vector3 cornerRight(cornerRightV.x_, cornerRightV.y_, cornerRightV.z_);
             
             for (int v = 0; v < slices + 1; ++v)
             {
                 float vCoord = (v / (float)(slices));
                 Vector2 profPt = profile[v];
                 Vector3 pt = cornerPt;
-                pt += cornerUp * pt.y_ + cornerRight * pt.x_;
+                pt += cornerUp * profPt.y_ + cornerRight * profPt.x_;
 
                 if (u == 0)
                     StartingProfile.Push(pt);
@@ -490,9 +507,6 @@ namespace Urho3D
         unsigned minVertex = M_MAX_UNSIGNED;
         unsigned maxVertex = 0;
         auto* vertices = (unsigned char*)vertexData;
-        unsigned vertexCount = maxVertex + 1;
-        PODVector<Vector3> normals;
-        normals.Resize(vertexCount);
 
         auto* indexPointer = const_cast<void*>(indexData);
         for (unsigned i = indexStart; i < indexStart + indexCount; ++i)
@@ -503,6 +517,10 @@ namespace Urho3D
             if (v > maxVertex)
                 maxVertex = v;
         }
+
+        unsigned vertexCount = maxVertex + 1;
+        PODVector<Vector3> normals;
+        normals.Resize(vertexCount);
 
         indexPointer = const_cast<void*>(indexData);
         for (unsigned i = indexStart; i < indexStart + indexCount; i += 3)
