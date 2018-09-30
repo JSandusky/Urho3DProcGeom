@@ -8,6 +8,8 @@
 
 #include <igl/decimate.h>
 
+#include <Urho3D/DebugNew.h>
+
 namespace Urho3D
 {
 
@@ -49,21 +51,20 @@ namespace Urho3D
                 largeIndices ? ((unsigned*)indexData)[i + 2] : ((unsigned short*)indexData)[i + 2],
             };
 
-            indices.coeffRef(i / 3, i) = idx[0] - vertexStart;
-            indices.coeffRef(i / 3, i + 1) = idx[1] - vertexStart;
-            indices.coeffRef(i / 3, i + 2) = idx[2] - vertexStart;
+            indices.coeffRef(i / 3, 0) = idx[0] - vertexStart;
+            indices.coeffRef(i / 3, 1) = idx[1] - vertexStart;
+            indices.coeffRef(i / 3, 2) = idx[2] - vertexStart;
         }
 
         Eigen::MatrixXd newPos;
         Eigen::MatrixXi newTris;
         Eigen::VectorXi birthFaces;
         Eigen::VectorXi birthVerts;
-        if (igl::decimate(positions, indices, (size_t)(indexCt * lodPower), newPos, newTris, birthFaces, birthVerts))
+        if (igl::decimate(positions, indices, (size_t)((indexCt/3) * lodPower), newPos, newTris, birthFaces, birthVerts))
         {
             Geometry* ret = new Geometry(src->GetContext());
 
-            unsigned char* newVtxData = new unsigned char[vertexSize * newPos.rows()];
-            unsigned char* newIndexData = new unsigned char[indexSize * newTris.rows()];
+            unsigned char* newIndexData = new unsigned char[indexSize * newTris.rows() * 3];
 
             for (unsigned i = 0; i < newTris.rows(); ++i)
             {
@@ -73,31 +74,38 @@ namespace Urho3D
                     indices[0] = newTris.coeff(i, 0);
                     indices[1] = newTris.coeff(i, 1);
                     indices[2] = newTris.coeff(i, 2);
-                    *(unsigned*)(i * indexSize + i) = indices[0];
-                    *(unsigned*)(i * indexSize + i) = indices[1];
-                    *(unsigned*)(i * indexSize + i) = indices[2];
+                    *(unsigned*)(newIndexData + (i*3) * indexSize) = indices[0];
+                    *(unsigned*)(newIndexData + (i*3+1) * indexSize) = indices[1];
+                    *(unsigned*)(newIndexData + (i*3+2) * indexSize) = indices[2];
                 }
                 else
                 {
                     indices[0] = newTris.coeff(i, 0);
                     indices[1] = newTris.coeff(i, 1);
                     indices[2] = newTris.coeff(i, 2);
-                    *(unsigned short*)(i * indexSize + i) = indices[0];
-                    *(unsigned short*)(i * indexSize + i) = indices[1];
-                    *(unsigned short*)(i * indexSize + i) = indices[2];
+                    *(unsigned short*)(newIndexData + (i*3) * indexSize) = indices[0];
+                    *(unsigned short*)(newIndexData + (i*3+1) * indexSize) = indices[1];
+                    *(unsigned short*)(newIndexData + (i*3+2) * indexSize) = indices[2];
                 }
             }
 
+            IndexBuffer* newIdxBuffer = new IndexBuffer(src->GetContext());
+            newIdxBuffer->SetShadowed(true);
+            newIdxBuffer->SetSize(newTris.rows() * 3, largeIndices);
+            newIdxBuffer->SetData(newIndexData);
+
+            unsigned char* newVtxData = new unsigned char[vertexSize * (unsigned)newPos.rows()];
             for (unsigned i = 0; i < newPos.rows(); ++i)
             {
                 unsigned birthIdx = vertexStart + birthVerts.coeff(i);
-
+            
                 *(Vector3*)(newVtxData + i * vertexSize + posOffset) = Vector3(newPos.coeff(i, 0), newPos.coeff(i, 1), newPos.coeff(i, 2));
-                for (auto elem : *elements)
+                for (size_t e = 0; e < elements->Size(); ++e)
                 {
+                    VertexElement elem = (*elements)[e];
                     if (elem.semantic_ == SEM_POSITION)
                         continue;
-
+                
                     switch (elem.type_)
                     {
                     case TYPE_VECTOR2:
@@ -122,22 +130,19 @@ namespace Urho3D
                     }
                 }
             }
-
+            
             VertexBuffer* newVertBuffer = new VertexBuffer(src->GetContext());
             newVertBuffer->SetShadowed(true);
-            newVertBuffer->SetSize(newPos.rows(), *elements);
-            newVertBuffer->SetData(newVtxData);
-            delete[] newVtxData;
-
-            IndexBuffer* newIdxBuffer = new IndexBuffer(src->GetContext());
-            newIdxBuffer->SetShadowed(true);
-            newIdxBuffer->SetSize(newTris.rows(), largeIndices);
-            newIdxBuffer->SetData(newIndexData);
+            newVertBuffer->SetSize((unsigned)newPos.rows(), *elements);
+            newVertBuffer->SetData(newVtxData);            
 
             ret->SetNumVertexBuffers(1);
             ret->SetVertexBuffer(0, newVertBuffer);
             ret->SetIndexBuffer(newIdxBuffer);
-            ret->SetDrawRange(TRIANGLE_LIST, 0, indexCt);
+            ret->SetDrawRange(TRIANGLE_LIST, 0, newTris.rows()*3);
+
+            delete[] newVtxData;
+            delete[] newIndexData;
 
             return ret;
         }
