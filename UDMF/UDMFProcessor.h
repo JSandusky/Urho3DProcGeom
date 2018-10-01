@@ -15,12 +15,13 @@ namespace UDMF
     namespace MapProcessing
     {
         SideDef* GetRightMost(const Sector* s);
-        SideDef* GetNextSide(SideDef* current, const Sector* sector);
+        SideDef* GetNextSide(SideDef* current, Sector* sector);
         
         void FillVertices(const Sector* sector, SideDef* start, Urho3D::PODVector<Urho3D::Vector2>& holder);
         Urho3D::PODVector<Urho3D::Vector2> GetSectorVerts(const Sector* sector);
 
         Urho3D::PODVector<Urho3D::Vector2> ToPointList(const Urho3D::PODVector<SideDef*>& list);
+        Urho3D::PODVector<Urho3D::Vector3>  ToPseudoNormals(const Urho3D::PODVector<Urho3D::Vector2>& list);
         Urho3D::PODVector<Urho3D::Vector3>  ToNormals(const Urho3D::PODVector<Urho3D::Vector2>& list);
         Urho3D::PODVector<Urho3D::Vector3> To3D(const Urho3D::PODVector<Urho3D::Vector2>& list);
 
@@ -50,12 +51,12 @@ namespace UDMF
         Urho3D::PODVector<HardCorner> GetSectorHardCorners(const Sector* sector, float angleTolerance);
 
         // WARNING: polygon returned is in Doom coordinates X,Y,Z==0
-        Polygon GetSectorPolygon(const Sector* sector);
+        math::Polygon GetSectorPolygon(const Sector* sector);
         bool Overlaps(const UDMFMap* lhs, const UDMFMap* rhs);
         // Shrinks the given polygon by the edges.
-        Polygon PolyShrink(const Polygon& poly, float distance);
+        math::Polygon PolyShrink(const math::Polygon& poly, float distance);
         // Shrinks the given polygon by vertex normals.
-        Polygon VertexShrink(const Polygon& poly, float distance);
+        math::Polygon VertexShrink(const math::Polygon& poly, float distance);
 
         void SkirtSector(const Sector* sector, float skirtDist, Urho3D::PODVector<Urho3D::Vector3>& pts, Urho3D::PODVector<unsigned>& indice, bool flipCulling);
         void PolygonizeSector(const Sector* sector, float height, Urho3D::PODVector<Urho3D::Vector3>& pts, Urho3D::PODVector<unsigned>& indice, bool flipCulling);

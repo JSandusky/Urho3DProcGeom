@@ -3,7 +3,30 @@
 
 using namespace Urho3D;
 
-namespace UDMF { namespace MapProcessing {
+namespace UDMF { 
+
+extern Vector2 Rotate2D(Vector2 v, float rotateBy);
+    
+namespace MapProcessing {
+
+    float DotPerp(float3 v1, float3 v2)
+    {
+        return v1.x*v2.y - v1.y*v2.x;
+    }
+    float3 IntersectionPoint(Line self, Line other, double dotThresh = 0.0f)
+    {
+        // see IntrLine2Line2 for explanation of algorithm
+        float3 diff = other.pos - self.pos;
+        double D0DotPerpD1 = DotPerp(self.dir, other.dir);
+        if (abs(D0DotPerpD1) > dotThresh) {                    // Lines intersect in a single point.
+            double invD0DotPerpD1 = ((double)1) / D0DotPerpD1;
+            double diffDotPerpD1 = DotPerp(diff, other.dir);
+            double s = diffDotPerpD1 * invD0DotPerpD1;
+            return self.pos + s * self.dir;
+        }
+        // Lines are parallel.
+        return float3(FLT_MAX, FLT_MAX, FLT_MAX);
+    }
 
     SideDef* GetRightMost(const Sector* sector)
     {
@@ -78,7 +101,7 @@ namespace UDMF { namespace MapProcessing {
         int tries = 0;
         do
         {
-            current = GetNextSide(current, sector);
+            current = GetNextSide(current, (Sector*)sector);
             if (current != nullptr && hit.Contains(current) == false)
             {
                 hit.Push(current);
@@ -123,7 +146,29 @@ namespace UDMF { namespace MapProcessing {
         return ret;
     }
 
-    extern Vector2 Rotate2D(Vector2 v, float rotateBy);
+    Urho3D::PODVector<Urho3D::Vector3> ToPseudoNormals(const Urho3D::PODVector<Urho3D::Vector2>& list)
+    {
+        PODVector<Line> lines;
+        for (int i = 0; i < list.Size() - 1; ++i)
+        {
+            auto cur = list[i];
+            auto next = list[i+1];
+            auto dir = (next - cur).Normalized();
+            Line l(float3(cur.x_, 0, cur.y_), float3(dir.x_, 0, dir.y_));
+            lines.Push(l);
+        }
+
+        PODVector<Vector3> points;
+        for (int i = 0; i < lines.Size() - 1; ++i)
+        {
+            auto& thisLine = lines[i];
+            auto& nextLine = lines[i + 1];
+            auto hitPt = IntersectionPoint(thisLine, nextLine);
+            points.Push(Vector3(hitPt.x, hitPt.y, hitPt.z));
+        }
+        return points;
+    }
+
     Urho3D::PODVector<Urho3D::Vector3>  ToNormals(const Urho3D::PODVector<Urho3D::Vector2>& vec)
     {
         PODVector<Vector3> ret;
@@ -404,25 +449,6 @@ namespace UDMF { namespace MapProcessing {
         return false;
     }
 
-    float DotPerp(float3 v1, float3 v2)
-    {
-        return v1.x*v2.y - v1.y*v2.x;
-    }
-    float3 IntersectionPoint(Line self, Line other, double dotThresh = 0.0f)
-    {
-        // see IntrLine2Line2 for explanation of algorithm
-        float3 diff = other.pos - self.pos;
-        double D0DotPerpD1 = DotPerp(self.dir, other.dir);
-        if (abs(D0DotPerpD1) > dotThresh) {                    // Lines intersect in a single point.
-            double invD0DotPerpD1 = ((double)1) / D0DotPerpD1;
-            double diffDotPerpD1 = DotPerp(diff, other.dir);
-            double s = diffDotPerpD1 * invD0DotPerpD1;
-            return self.pos + s * self.dir;
-        }
-        // Lines are parallel.
-        return float3(FLT_MAX, FLT_MAX, FLT_MAX);
-    }
-
     float3 Perp(float3 v)
     {
         return float3(v.y_, -v.x_, v.z_);
@@ -446,6 +472,7 @@ namespace UDMF { namespace MapProcessing {
     Polygon PolyShrink(const Polygon& poly, float dist)
     {
         std::vector<float3> newv;
+        newv.resize(poly.p.size());
         for (int k = 0; k < poly.p.size(); ++k) {
             auto v = poly.p[k];
             auto next = poly.p[(k + 1) % poly.p.size()];
