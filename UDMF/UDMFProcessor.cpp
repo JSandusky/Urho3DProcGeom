@@ -586,7 +586,6 @@ namespace MapProcessing {
                 indice.Push(idx + 1);
                 indice.Push(idx + 2);
             }
-            idx += 3;
         }
     }
 } }
