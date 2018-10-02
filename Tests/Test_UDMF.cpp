@@ -78,4 +78,25 @@ void Test_UDMFPolygonizeSectors(Context* ctx)
     delete g;
 }
 
+void Test_UDMF_AlignToSide_MergeInto(Context* ctx)
+{
+    auto udmfMapFile = ctx->GetSubsystem<ResourceCache>()->GetResource<XMLFile>("Maps/JoinB.xml");
+    UDMF::UDMFMap* map = new UDMF::UDMFMap();
+    map->Read(udmfMapFile->GetRoot());
+    udmfMapFile = ctx->GetSubsystem<ResourceCache>()->GetResource<XMLFile>("Maps/JoinA.xml");
+    UDMF::UDMFMap* otherMap = new UDMF::UDMFMap();
+    otherMap->Read(udmfMapFile->GetRoot());
+
+    map->AlignSides(map->sides_[28], otherMap, otherMap->sides_[8], true);
+    map->MergeIntoThis(otherMap);
+                
+    Image* img = new Image(ctx);
+    img->SetSize(512, 512, 4);
+    map->Render(img);
+    img->SavePNG("Test_UDMF_AlignToSide_MergeInto.png");
+    delete img;
+    delete map;
+    delete otherMap;
+}
+
 }

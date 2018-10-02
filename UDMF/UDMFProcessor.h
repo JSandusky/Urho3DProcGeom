@@ -52,6 +52,7 @@ namespace UDMF
 
         // WARNING: polygon returned is in Doom coordinates X,Y,Z==0
         math::Polygon GetSectorPolygon(const Sector* sector);
+        /// Returns true if the two maps overlap.
         bool Overlaps(const UDMFMap* lhs, const UDMFMap* rhs);
         // Shrinks the given polygon by the edges.
         math::Polygon PolyShrink(const math::Polygon& poly, float distance);

@@ -233,12 +233,18 @@ namespace UDMF
         PODVector<MapVertex*> newVerts = rhs->vertices_;
         PODVector<LineDef*> newLines = rhs->lines_;
 
+        PODVector<MapVertex*> vertsToDelete;
+        PODVector<LineDef*> linesToDelete;
+
+        PODVector<MapVertex*> vertsToAdd;
+        PODVector<LineDef*> linesToAdd;
+
         for (unsigned i = 0; i < rhs->vertices_.Size(); ++i)
         {
             static auto findVert = [](PODVector<MapVertex*>& target, MapVertex* v) {
                 for (auto it = target.Begin(); it != target.End(); ++it)
                 {
-                    if ((*it)->position_ == v->position_)
+                    if ((v->position_ - (*it)->position_).Length() < 0.01f)
                         return *it;
                 }
                 return v;
@@ -247,12 +253,13 @@ namespace UDMF
             auto found = findVert(vertices_, rhs->vertices_[i]);
             if (found != rhs->vertices_[i])
             {
-                delete rhs->vertices_[i];
-                newVerts[i] = vertices_[i];
+                vertsToDelete.Push(rhs->vertices_[i]);
+                newVerts[i] = found;
             }
             else
-                vertices_.Push(found);
+                vertsToAdd.Push(found);
         }
+        vertices_.Push(vertsToAdd);
 
         for (unsigned i = 0; i < rhs->lines_.Size(); ++i)
         {
@@ -273,11 +280,12 @@ namespace UDMF
             if (found != rhsLine)
             {
                 newLines[i] = found;
-                delete rhsLine;
+                linesToDelete.Push(rhsLine);
             }
             else
-                lines_.Push(rhsLine);
+                linesToAdd.Push(rhsLine);
         }
+        lines_.Push(linesToAdd);
         
         for (auto s : rhs->sides_)
         {
@@ -286,9 +294,17 @@ namespace UDMF
             {
                 s->line_ = newLines[lineIdx];
                 if (s->line_->front_ == nullptr)
+                {
                     s->line_->front_ = s;
+                    s->isFront_ = true;
+                    s->line_->metadata_.impassable_ = false;
+                }
                 else if (s->line_->back_ == nullptr)
+                {
                     s->line_->back_ = s;
+                    s->isFront_ = false;
+                    s->line_->metadata_.impassable_ = false;
+                }
                 else
                 {
                     // this is bad ... this should not happen right?
@@ -323,37 +339,42 @@ namespace UDMF
         rhs->sectors_.Clear();
         rhs->sides_.Clear();
 
+        for (auto v : vertsToDelete)
+            delete v;
+        for (auto l : linesToDelete)
+            delete l;
+
         Reindex();
     }
 
-    bool UDMFMap::AlignSides(SideDef* thisMapsSide, UDMFMap* otherMap, SideDef* otherMapSide)
+    bool UDMFMap::AlignSides(SideDef* thisMapsSide, UDMFMap* otherMap, SideDef* otherMapSide, bool force)
     {
         // can't align two sided lines
         if (thisMapsSide->line_->HasTwoFaces() && otherMapSide->line_->HasTwoFaces())
             return false;
 
         // sides need to be the same length to align
-        if (thisMapsSide->line_->GetLineVec().Length() != otherMapSide->line_->GetLineVec().Length())
+        if (thisMapsSide->line_->GetLineVec().Length() != otherMapSide->line_->GetLineVec().Length() && !force)
             return false;
         
         auto thisLine = thisMapsSide->line_;
         auto otherLine = otherMapSide->line_;
 
-        auto thisLineNorm = -thisLine->faceNormal_;
-        auto otherLineNorm = otherLine->faceNormal_;
+        auto thisLineNorm = thisLine->faceNormal_;
+        auto otherLineNorm = -otherLine->faceNormal_;
 
         // rotate so the lines are aligned
         float angleBetween = thisLineNorm.Angle(otherLineNorm);
-        otherMap->Transform(Vector2(), -angleBetween);
+        otherMap->Transform(Vector2(), angleBetween);
         
         // translate so the lines are on top of each-other
-        auto otherLineCenter = otherLine->GetLineVec() * 0.5f;
-        auto thisLineCenter = thisLine->GetLineVec() * 0.5f;
+        auto otherLineCenter = otherLine->GetLineCenter();
+        auto thisLineCenter = thisLine->GetLineCenter();
         auto delta = thisLineCenter - otherLineCenter;
         otherMap->Transform(delta, 0);
         
-        otherLine->start_->position_ = thisLine->end_->position_;
-        otherLine->end_->position_ = thisLine->start_->position_;
+        //otherLine->start_->position_ = thisLine->end_->position_;
+        //otherLine->end_->position_ = thisLine->start_->position_;
 
         // once aligned, MergeIntoThis() will take care of things
         return true;
@@ -479,6 +500,13 @@ namespace UDMF
         CalculateGeometricData();
     }
 
+    void UDMFMap::Scale(const Urho3D::Vector2& scaleBy)
+    {
+        for (auto v : vertices_)
+            v->position_ *= scaleBy;
+        CalculateGeometricData();
+    }
+
     void UDMFMap::Flip(bool vertical, bool horizontal)
     {
         Vector2 mulvec = Vector2(horizontal ? -1 : 1, vertical ? -1 : 1);
@@ -512,9 +540,17 @@ namespace UDMF
         for (auto side : s->sides_)
         {
             if (side->line_->front_ == side)
-                side->line_->front_ == nullptr;
+            {
+                side->line_->front_ = nullptr;
+                if (side->line_->back_ != nullptr)
+                {
+                    // swap out the other back if need be
+                    side->line_->front_ = side->line_->back_;
+                    side->line_->front_->isFront_ = true;
+                }
+            }
             if (side->line_->back_ == side)
-                side->line_->back_ == nullptr;
+                side->line_->back_ = nullptr;
             if (side->line_->front_ == nullptr && side->line_->back_ == nullptr)
             {
                 lines_.Remove(side->line_);
@@ -528,6 +564,8 @@ namespace UDMF
         delete s;
         if (recalcData)
         {
+            for (auto line : lines_)
+                line->NormalizeSides();
             Reindex();
             LinkVerticesToLines();
             CalculateGeometricData();
@@ -538,6 +576,8 @@ namespace UDMF
     {
         for (auto ss : s)
             RemoveSector(ss, false);
+        for (auto line : lines_)
+            line->NormalizeSides();
         Reindex();
         LinkVerticesToLines();
         CalculateGeometricData();
@@ -597,6 +637,9 @@ namespace UDMF
 
     Lexer::Token Lexer::Peek()
     {
+        if (index_ == lastPeekIndex_)
+            return lastPeekToken_;
+        lastPeekIndex_ = index_;
         unsigned i = index_;
         while (i < data_.Length())
         {
@@ -611,23 +654,27 @@ namespace UDMF
                     ++i;
             }
             else if (data_[i] == '{')
-                return Open;
+                return lastPeekToken_ = Open;
             else if (data_[i] == '}')
                 return Close;
             else if (data_[i] == '=')
-                return Assign;
+                return lastPeekToken_ = Assign;
             else if (data_[i] == ';')
-                return Semi;
+                return lastPeekToken_ = Semi;
             else if (memcmp(data_.CString() + i, "true", 4) == 0)
-                return Boolean;
+                return lastPeekToken_ = Boolean;
+            else if (memcmp(data_.CString() + i, "True", 4) == 0)
+                return lastPeekToken_ = Boolean;
+            else if (memcmp(data_.CString() + i, "False", 5) == 0)
+                return lastPeekToken_ = Boolean;
             else if (memcmp(data_.CString() + i, "false", 5) == 0)
-                return Boolean;
+                return lastPeekToken_ = Boolean;
             else if (isalpha(data_[i]) || data_[i] == '"')
-                return Text;
+                return lastPeekToken_ = Text;
             else if (isalnum(data_[i]))
-                return Number;
+                return lastPeekToken_ = Number;
         }
-        return End;
+        return lastPeekToken_ = End;
     }
     
     Lexer::Lexer(const String& data)
@@ -701,6 +748,8 @@ namespace UDMF
         while (data_[index_] == ' ')
             ++index_;
         if (memcmp(data_.CString() + index_, "true", 4) == 0)
+            return true;
+        if (memcmp(data_.CString() + index_, "True", 4) == 0)
             return true;
         return false;
     }
@@ -789,9 +838,11 @@ namespace UDMF
                 image->DrawLine(a, b, Color::RED);
             else if (l->metadata_.isSecret_)
                 image->DrawLine(a, b, Color::MAGENTA);
-            else if (l->front_->sector_->floorHeight_ != l->back_->sector_->floorHeight_ || 
-                l->front_->sector_->ceilingHeight_ != l->back_->sector_->ceilingHeight_)
-                image->DrawLine(a, b, Color::GRAY);
+            else if (l->front_ != nullptr && l->back_ != nullptr)
+            {
+                if (l->front_->sector_->floorHeight_ != l->back_->sector_->floorHeight_ || l->front_->sector_->ceilingHeight_ != l->back_->sector_->ceilingHeight_)
+                    image->DrawLine(a, b, Color::GRAY);
+            }
         }
     }
 }

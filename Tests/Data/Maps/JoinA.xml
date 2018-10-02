@@ -1,0 +1,193 @@
+<map name="MAP01">
+	<sectors>
+		<sector idx="0" tag="0" ceiling-height="128" floor-height="0" ceiling-tex="CEIL1_1" floor-tex="FLOOR0_1" lighting="192" special="0">
+			<sides>0,1,2,3,5,9,11,13,15,17</sides>
+			<fields />
+		</sector>
+		<sector idx="1" tag="0" ceiling-height="128" floor-height="0" ceiling-tex="CEIL1_1" floor-tex="FLOOR0_1" lighting="192" special="0">
+			<sides>4,6,7,8</sides>
+			<fields />
+		</sector>
+		<sector idx="2" tag="0" ceiling-height="128" floor-height="24" ceiling-tex="CEIL1_1" floor-tex="FLOOR0_1" lighting="192" special="0">
+			<sides>10,12,14,16</sides>
+			<fields />
+		</sector>
+	</sectors>
+	<vertices>
+		<v idx="0" x="-1024" y="64">
+			<fields />
+		</v>
+		<v idx="1" x="-1024" y="448">
+			<fields />
+		</v>
+		<v idx="2" x="-448" y="448">
+			<fields />
+		</v>
+		<v idx="3" x="-448" y="64">
+			<fields />
+		</v>
+		<v idx="4" x="-576" y="64">
+			<fields />
+		</v>
+		<v idx="5" x="-896" y="-64">
+			<fields />
+		</v>
+		<v idx="6" x="-896" y="64">
+			<fields />
+		</v>
+		<v idx="7" x="-576" y="-64">
+			<fields />
+		</v>
+		<v idx="8" x="-832" y="192">
+			<fields />
+		</v>
+		<v idx="9" x="-832" y="320">
+			<fields />
+		</v>
+		<v idx="10" x="-640" y="320">
+			<fields />
+		</v>
+		<v idx="11" x="-640" y="192">
+			<fields />
+		</v>
+	</vertices>
+	<lines>
+		<line idx="0" action="0" tag="0" activate="0" action-args="0,0,0,0,0" vert-start="0" vert-end="1">
+			<flags>
+				<flag name="blocking" value="True" />
+			</flags>
+			<fields />
+		</line>
+		<line idx="1" action="0" tag="0" activate="0" action-args="0,0,0,0,0" vert-start="1" vert-end="2">
+			<flags>
+				<flag name="blocking" value="True" />
+			</flags>
+			<fields />
+		</line>
+		<line idx="2" action="0" tag="0" activate="0" action-args="0,0,0,0,0" vert-start="2" vert-end="3">
+			<flags>
+				<flag name="blocking" value="True" />
+			</flags>
+			<fields />
+		</line>
+		<line idx="3" action="0" tag="0" activate="0" action-args="0,0,0,0,0" vert-start="3" vert-end="4">
+			<flags>
+				<flag name="blocking" value="True" />
+			</flags>
+			<fields />
+		</line>
+		<line idx="4" action="0" tag="0" activate="0" action-args="0,0,0,0,0" vert-start="5" vert-end="6">
+			<flags>
+				<flag name="blocking" value="True" />
+			</flags>
+			<fields />
+		</line>
+		<line idx="5" action="0" tag="0" activate="0" action-args="0,0,0,0,0" vert-start="4" vert-end="6">
+			<flags>
+				<flag name="twosided" value="True" />
+			</flags>
+			<fields />
+		</line>
+		<line idx="6" action="0" tag="0" activate="0" action-args="0,0,0,0,0" vert-start="4" vert-end="7">
+			<flags>
+				<flag name="blocking" value="True" />
+			</flags>
+			<fields />
+		</line>
+		<line idx="7" action="0" tag="0" activate="0" action-args="0,0,0,0,0" vert-start="7" vert-end="5">
+			<flags>
+				<flag name="blocking" value="True" />
+			</flags>
+			<fields />
+		</line>
+		<line idx="8" action="0" tag="0" activate="0" action-args="0,0,0,0,0" vert-start="6" vert-end="0">
+			<flags>
+				<flag name="blocking" value="True" />
+			</flags>
+			<fields />
+		</line>
+		<line idx="9" action="0" tag="0" activate="0" action-args="0,0,0,0,0" vert-start="8" vert-end="9">
+			<flags>
+				<flag name="twosided" value="True" />
+			</flags>
+			<fields />
+		</line>
+		<line idx="10" action="0" tag="0" activate="0" action-args="0,0,0,0,0" vert-start="9" vert-end="10">
+			<flags>
+				<flag name="twosided" value="True" />
+			</flags>
+			<fields />
+		</line>
+		<line idx="11" action="0" tag="0" activate="0" action-args="0,0,0,0,0" vert-start="10" vert-end="11">
+			<flags>
+				<flag name="twosided" value="True" />
+			</flags>
+			<fields />
+		</line>
+		<line idx="12" action="0" tag="0" activate="0" action-args="0,0,0,0,0" vert-start="11" vert-end="8">
+			<flags>
+				<flag name="twosided" value="True" />
+			</flags>
+			<fields />
+		</line>
+	</lines>
+	<sides>
+		<side idx="0" line="0" middle-tex="STARTAN2" offset-x="0" offset-y="0" front="True">
+			<fields />
+		</side>
+		<side idx="1" line="1" middle-tex="STARTAN2" offset-x="0" offset-y="0" front="True">
+			<fields />
+		</side>
+		<side idx="2" line="2" middle-tex="STARTAN2" offset-x="0" offset-y="0" front="True">
+			<fields />
+		</side>
+		<side idx="3" line="3" middle-tex="STARTAN2" offset-x="0" offset-y="0" front="True">
+			<fields />
+		</side>
+		<side idx="4" line="4" middle-tex="STARTAN2" offset-x="0" offset-y="0" front="True">
+			<fields />
+		</side>
+		<side idx="5" line="5" offset-x="0" offset-y="0" front="True">
+			<fields />
+		</side>
+		<side idx="6" line="5" offset-x="0" offset-y="0" front="False">
+			<fields />
+		</side>
+		<side idx="7" line="6" middle-tex="STARTAN2" offset-x="0" offset-y="0" front="True">
+			<fields />
+		</side>
+		<side idx="8" line="7" middle-tex="STARTAN2" offset-x="0" offset-y="0" front="True">
+			<fields />
+		</side>
+		<side idx="9" line="8" middle-tex="STARTAN2" offset-x="0" offset-y="0" front="True">
+			<fields>
+				<field name="offsetx_mid" type="1"><![CDATA[64]]></field>
+			</fields>
+		</side>
+		<side idx="10" line="9" offset-x="0" offset-y="0" front="True">
+			<fields />
+		</side>
+		<side idx="11" line="9" offset-x="0" offset-y="0" front="False">
+			<fields />
+		</side>
+		<side idx="12" line="10" offset-x="0" offset-y="0" front="True">
+			<fields />
+		</side>
+		<side idx="13" line="10" offset-x="0" offset-y="0" front="False">
+			<fields />
+		</side>
+		<side idx="14" line="11" offset-x="0" offset-y="0" front="True">
+			<fields />
+		</side>
+		<side idx="15" line="11" offset-x="0" offset-y="0" front="False">
+			<fields />
+		</side>
+		<side idx="16" line="12" offset-x="0" offset-y="0" front="True">
+			<fields />
+		</side>
+		<side idx="17" line="12" offset-x="0" offset-y="0" front="False">
+			<fields />
+		</side>
+	</sides>
+	<things />
+</map>

@@ -438,10 +438,10 @@ namespace MapProcessing {
     {
         for (auto sector : lhs->sectors_)
         {
-            auto poly = VertexShrink(GetSectorPolygon(sector), -0.01f);
+            auto poly = VertexShrink(GetSectorPolygon(sector), -0.1f);
             for (auto otherSector : rhs->sectors_)
             {
-                auto otherPoly = VertexShrink(GetSectorPolygon(otherSector), -0.01f);
+                auto otherPoly = VertexShrink(GetSectorPolygon(otherSector), -0.1f);
                 if (poly.Intersects(otherPoly))
                     return true;
             }
