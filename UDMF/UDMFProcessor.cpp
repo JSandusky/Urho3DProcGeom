@@ -1,6 +1,8 @@
 #include <Urho3D/UDMF/UDMFMap.h>
 #include <Urho3D/UDMF/UDMFProcessor.h>
 
+#include "polypartition.h"
+
 using namespace Urho3D;
 
 namespace UDMF { 
@@ -126,7 +128,7 @@ namespace MapProcessing {
         return ret;
     }
 
-    Urho3D::PODVector<Urho3D::Vector2> ToPointList(const Urho3D::PODVector<SideDef*>& chain)
+    Urho3D::PODVector<Urho3D::Vector2> ToPointList(const Urho3D::PODVector<SideDef*>& chain, bool asLoop)
     {
         PODVector<Vector2> ret;
         for (int i = 0; i < chain.Size(); ++i)
@@ -136,7 +138,7 @@ namespace MapProcessing {
             else
                 ret.Push(chain[i]->line_->end_->position_);
         }
-        if (chain.Size() > 0)
+        if (chain.Size() > 0 && !asLoop)
         {
             if (chain[chain.Size() - 1]->isFront_)
                 ret.Push(chain[chain.Size() - 1]->line_->end_->position_);
@@ -146,67 +148,45 @@ namespace MapProcessing {
         return ret;
     }
 
-    Urho3D::PODVector<Urho3D::Vector3> ToPseudoNormals(const Urho3D::PODVector<Urho3D::Vector2>& list)
-    {
-        PODVector<Line> lines;
-        for (int i = 0; i < list.Size() - 1; ++i)
-        {
-            auto cur = list[i];
-            auto next = list[i+1];
-            auto dir = (next - cur).Normalized();
-            Line l(float3(cur.x_, 0, cur.y_), float3(dir.x_, 0, dir.y_));
-            lines.Push(l);
-        }
-
-        PODVector<Vector3> points;
-        for (int i = 0; i < lines.Size() - 1; ++i)
-        {
-            auto& thisLine = lines[i];
-            auto& nextLine = lines[i + 1];
-            auto hitPt = IntersectionPoint(thisLine, nextLine);
-            points.Push(Vector3(hitPt.x, hitPt.y, hitPt.z));
-        }
-        return points;
-    }
-
     Urho3D::PODVector<Urho3D::Vector3>  ToNormals(const Urho3D::PODVector<Urho3D::Vector2>& vec)
     {
         PODVector<Vector3> ret;
+#define TO3D(V) Vector3(V.x_, 0, V.y_)
         for (int i = 0; i < vec.Size(); ++i)
         {
             int prev = i - 1;
             int next = i + 1;
-            Vector2 pt = vec[i];
-            Vector2 cur;
-            Vector2 backup;
+            Vector3 pt = TO3D(vec[i]);
+            Vector3 cur;
+            Vector3 backup;
             if (prev >= 0)
             {
-                auto prevPt = vec[prev];
-                prevPt = Rotate2D((pt - prevPt), -90);
+                auto prevPt = TO3D(vec[prev]);
+                prevPt = Quaternion(-90, Vector3::UP) * (pt - prevPt);
                 prevPt.Normalize();
                 backup = prevPt;
                 cur += prevPt;
             }
             else if (i == 0 && vec.Front() == vec.Back())
             {
-                auto prevPt = vec[vec.Size() - 2];
-                prevPt = Rotate2D((pt - prevPt), -90);
+                auto prevPt = TO3D(vec[vec.Size() - 2]);
+                prevPt = Quaternion(-90, Vector3::UP) * (pt - prevPt);
                 prevPt.Normalize();
                 backup = prevPt;
                 cur += prevPt;
             }
             if (next < vec.Size())
             {
-                auto nextPt = vec[next];
-                nextPt = Rotate2D((nextPt - pt), -90);
+                auto nextPt = TO3D(vec[next]);
+                nextPt = Quaternion(-90, Vector3::UP) * (nextPt - pt);
                 nextPt.Normalize();
                 backup = nextPt;
                 cur += nextPt;
             }
             else if (i == vec.Size() - 1 && vec.Front() == vec.Back())
             {
-                auto nextPt = vec[1];
-                nextPt = Rotate2D((nextPt - pt), -90);
+                auto nextPt = TO3D(vec[1]);
+                nextPt = Quaternion(-90, Vector3::UP) * (nextPt - pt);
                 nextPt.Normalize();
                 backup = nextPt;
                 cur += nextPt;
@@ -214,8 +194,25 @@ namespace MapProcessing {
             cur.Normalize();
             if (isnan(cur.x_) || isnan(cur.y_))
                 cur = backup;
-            ret.Push(Vector3(cur.x_, 0, cur.y_));
+            ret.Push(cur);
         }
+
+        PODVector<Vector3> corrected;
+        for (unsigned i = 0; i < ret.Size(); ++i)
+        {
+            if (i == 0 || i == ret.Size() - 1)
+            {
+                corrected.Push(ret[i]);
+                continue;
+            }
+            auto cur = ret[i];
+            auto prevNorm = ret[i - 1];
+            auto nextNorm = ret[i + 1];
+
+            auto newCur = cur * (1.0f + (1.0f - cur.AbsDotProduct(prevNorm)) + (1.0f - cur.AbsDotProduct(nextNorm)));
+            corrected.Push(newCur);
+        }
+        ret = corrected;
         return ret;
     }
 
@@ -355,6 +352,46 @@ namespace MapProcessing {
         return ret;
     }
 
+    Urho3D::Vector<Urho3D::PODVector<SideDef*>> GetAllSectorChains(Sector* s)
+    {
+        Vector<PODVector<SideDef*>> ret;
+
+        bool hitImpassable = false;
+        PODVector<SideDef*> working;
+        SideDef* lastSide = GetRightMost(s);
+        working.Push(lastSide);
+
+        auto sides = s->sides_;
+        sides.Remove(lastSide);
+        while (sides.Size() > 0)
+        {
+            for (int i = 0; i < sides.Size(); ++i)
+            {
+                auto side = sides[i];
+                if (SideDef::IsConnected(lastSide, side))
+                {
+                    if (!working.Contains(side))
+                        working.Push(side);
+                    lastSide = side;
+                    sides.Erase(i);
+                    i = -1;
+                }
+            }
+            if (working.Size() > 0)
+            {
+                ret.Push(working);
+                working.Clear();
+                if (sides.Size() > 0)
+                {
+                    lastSide = sides[0];
+                    working.Push(lastSide);
+                }
+            }
+        }
+
+        return ret;
+    }
+
     Urho3D::PODVector<EdgeFitment> GetSectorEdgeFitments(const Sector* sector)
     {
         PODVector<EdgeFitment> ret;
@@ -432,6 +469,23 @@ namespace MapProcessing {
         for (auto v : verts)
             poly.p.push_back(float3(v.x_, v.y_, 0));
         return poly;
+    }
+
+    Urho3D::Vector<math::Polygon> GetSectorPolygons(const Sector* sector)
+    {
+        Urho3D::Vector<math::Polygon> ret;
+
+        auto chains = GetAllSectorChains((Sector*)sector);
+        for (auto chain : chains)
+        {
+            auto verts = ToPointList(chain, true);
+            math::Polygon p;
+            for (auto v : verts)
+                p.p.push_back(math::float3(v.x_, v.y_, 0));
+            ret.Push(p);
+        }
+        
+        return ret;
     }
 
     bool Overlaps(const UDMFMap* lhs, const UDMFMap* rhs)
@@ -563,6 +617,48 @@ namespace MapProcessing {
         }
     }
 
+    math::Polygon HoleLinkPolygons(const Vector<math::Polygon>& polygons)
+    {
+        math::Polygon working = polygons[0];
+        for (int i = 1; i < polygons.Size(); ++i)
+        {
+            math::Polygon thisPoly = polygons[i];
+            float nearestDist = FLT_MAX;
+            unsigned nearestIdx = -1;
+            unsigned nearestOther = -1;
+
+            for (int v = 0; v < working.p.size(); ++v)
+            {
+                auto vert = working.p[v];
+                auto nearest = thisPoly.ClosestPoint(vert);
+                float dist = (vert - nearest).Length();
+                if (dist < nearestDist)
+                {
+                    nearestDist = dist;
+                    auto bestOnThis = std::find(thisPoly.p.begin(), thisPoly.p.end(), nearest);
+                    nearestIdx = std::distance(thisPoly.p.begin(), bestOnThis);
+                    nearestOther = v;
+                }
+            }
+
+            if (nearestIdx != -1)
+            {
+                // insert the polygon as a loop.
+                auto startWorkingIt = working.p.begin() + nearestOther;
+                std::vector<math::vec> newPoints;
+                newPoints.push_back(working.p[nearestOther]);
+                for (unsigned i = nearestIdx; i < thisPoly.p.size(); ++i)
+                    newPoints.push_back(thisPoly.p[i]);
+                for (unsigned i = 0; i < nearestIdx; ++i)
+                    newPoints.push_back(thisPoly.p[i]);
+                newPoints.push_back(working.p[nearestOther]);
+                
+                working.p.insert(startWorkingIt, newPoints.begin(), newPoints.end());
+            }
+        }
+        return working;
+    }
+
     void PolygonizeSector(const Sector* sector, float height, Urho3D::PODVector<Urho3D::Vector3>& mesh, Urho3D::PODVector<unsigned>& indice, bool flipCulling)
     {
         auto poly = GetSectorPolygon(sector);
@@ -586,6 +682,60 @@ namespace MapProcessing {
                 indice.Push(idx + 1);
                 indice.Push(idx + 2);
             }
+        }
+    }
+
+    void PolygonizeSectorWithHoles(const Sector* sector, float height, Urho3D::PODVector<Urho3D::Vector3>& mesh, Urho3D::PODVector<unsigned>& indice, bool flipCulling)
+    {
+        auto polygons = GetSectorPolygons(sector);
+
+        TPPLPolyList inputPolys;
+        for (int i = 0; i < polygons.Size(); ++i)
+        {
+            TPPLPoly poly;
+            std::reverse(polygons[i].p.begin(), polygons[i].p.end());
+            poly.Init(polygons[i].NumVertices());
+            for (int v = 0; v < polygons[i].p.size(); ++v)
+            {
+                poly.GetPoint(v).x = polygons[i].p[v].x;
+                poly.GetPoint(v).y = polygons[i].p[v].y;
+            }
+            poly.SetHole(i > 0);
+            inputPolys.push_back(poly);
+        }
+
+        TPPLPartition partition;
+        TPPLPolyList result;
+
+        // only do a remove holes if necessary, has some heavy setup costs.
+        if (polygons.Size() > 1)
+        {
+            TPPLPolyList holeCut;
+            partition.RemoveHoles(&inputPolys, &holeCut);
+            partition.Triangulate_EC(&holeCut, &result);
+        }
+        else
+            partition.Triangulate_EC(&inputPolys, &result);
+
+        unsigned idx = 0;
+        for (auto poly : result)
+        {
+            for (int i = 0; i < poly.GetNumPoints(); ++i)
+                mesh.Push(Vector3(poly.GetPoint(i).x, height, poly.GetPoint(i).y));
+
+            if (flipCulling)
+            {
+                indice.Push(idx + 0);
+                indice.Push(idx + 2);
+                indice.Push(idx + 1);
+            }
+            else
+            {
+                indice.Push(idx + 0);
+                indice.Push(idx + 1);
+                indice.Push(idx + 2);
+            }
+            idx += 3;
         }
     }
 } }
